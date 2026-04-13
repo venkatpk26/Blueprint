@@ -118,8 +118,9 @@ padding-bottom: 6px;
 .proc-layers-label {
 font-size: 9px; font-weight: 700; letter-spacing: .1em;
 text-transform: uppercase; color: #5E7A99; line-height: 1.5;
-text-align: center;
+text-align: center; transition: color .15s;
 }
+td.corner:hover .proc-layers-label { color: #0F1E35; }
 /* Column header cells */
 .col-hdr {
 cursor: pointer;
@@ -247,7 +248,9 @@ display: flex;
 align-items: stretch;
 gap: 4px;
 flex-shrink: 0;
+transition: opacity .15s;
 }
+.data-layers-bar:hover { opacity: .85; }
 .data-layers-bar-spacer {
 width: 130px;
 flex-shrink: 0;
@@ -337,7 +340,7 @@ width: 100%;
 
   <!-- MATRIX -->
 
-  <div class="data-layers-bar">
+  <div class="data-layers-bar" onclick="openPanel('data-layers',this)" style="cursor:pointer">
     <div class="data-layers-bar-spacer"></div>
     <div class="data-layers-bar-label">
       <span class="dlb-title">Data Layers</span>
@@ -349,7 +352,7 @@ width: 100%;
 
 ```
 <tr>
-  <td class="corner"><div class="proc-layers-label">Processing<br>Layers ↓</div></td>
+  <td class="corner" onclick="openPanel('proc-layers',this)" style="cursor:pointer" title="Click to explore processing layers"><div class="proc-layers-label" style="text-decoration:underline dotted;text-underline-offset:3px">Processing<br>Layers ↓</div></td>
   <td class="col-hdr" style="background:#CDD5DE;color:var(--c-raw)" onclick="openPanel('col-raw',this)"><span class="col-num">01</span><span class="col-name">Raw</span><span class="col-desc">Source-aligned, unprocessed</span></td>
   <td class="col-hdr" style="background:#F8D9B0;color:var(--c-txn)" onclick="openPanel('col-txn',this)"><span class="col-num">02</span><span class="col-name">Transaction</span><span class="col-desc">Canonical structured records</span></td>
   <td class="col-hdr" style="background:#B8D4F5;color:var(--c-sch)" onclick="openPanel('col-sch',this)"><span class="col-num">03</span><span class="col-name">Schedule</span><span class="col-desc">Domain-level data (AP, AR, FA)</span></td>
@@ -473,6 +476,47 @@ width: 100%;
 
 <script>
 const DATA = {
+  'data-layers':{ badge:{label:'Architecture Concept',color:'#0F1E35',bg:'#E2EAF4'}, title:'Data Evolution Layers', desc:'Data Layers show how data matures across the platform — from raw source records through to final consumption outputs. Each layer represents a distinct state of data, not a processing step.', sections:[
+    {label:'What They Mean',bullets:[
+      'Show how data matures across the platform',
+      'Represent the changing state of data from source to consumption',
+      'Ensure traceability from final output back to origin'
+    ]},
+    {label:'Layer Flow',flow:[
+      {label:'Raw',color:'#64748B',bg:'#F1F5F9',desc:'Source-aligned, unprocessed data'},
+      {label:'Transaction',color:'#B45309',bg:'#FEF3C7',desc:'Normalised, canonical records'},
+      {label:'Schedule',color:'#1D4ED8',bg:'#DBEAFE',desc:'Domain-structured business views'},
+      {label:'Fact',color:'#15803D',bg:'#DCFCE7',desc:'Integrated, cross-schedule data'},
+      {label:'Semantic',color:'#6D28D9',bg:'#EDE9FE',desc:'Business-friendly metrics and dimensions'},
+      {label:'Product / View',color:'#9D174D',bg:'#FCE7F3',desc:'Dashboards, reports, APIs, exports'},
+    ]},
+    {label:'Why This Matters',bullets:[
+      'Separates data maturity stages clearly',
+      'Improves governance, auditability, and extensibility',
+      'Makes outputs easier to explain and trust'
+    ]},
+    {label:'Key Principle',callout:{text:'Data Layers are states of data maturity — not processing steps. A row in the Fact Layer is the same data as its Raw origin, evolved through governed transformations with full lineage.',color:'#0F1E35'}},
+  ]},
+  'proc-layers':{ badge:{label:'Architecture Concept',color:'#0D9488',bg:'#CCFBF1'}, title:'Data Processing Layers', desc:'Processing Layers show how the platform acts on data across its lifecycle. They represent the system\'s capabilities — not data states — and each operates across multiple data evolution layers.', sections:[
+    {label:'What They Mean',bullets:[
+      'Show how the platform acts on data across its lifecycle',
+      'Represent the system\'s capabilities, not data states',
+      'Operate across multiple evolution layers simultaneously'
+    ]},
+    {label:'Layer Flow',flow:[
+      {label:'Data Ingestion',color:'#B45309',bg:'#FEF3C7',desc:'Load, map, normalise, validate'},
+      {label:'Data Transformation',color:'#1D4ED8',bg:'#DBEAFE',desc:'Enrich, classify, reclass, offset, allocate'},
+      {label:'Data Processing',color:'#15803D',bg:'#DCFCE7',desc:'Aggregate, roll up, compute KPIs and metrics'},
+      {label:'Data Visualisation',color:'#0D9488',bg:'#CCFBF1',desc:'Serve dashboards, reports, APIs'},
+      {label:'Data Control Panel',color:'#6D28D9',bg:'#EDE9FE',desc:'Track lineage, staleness, reruns, readiness'},
+    ]},
+    {label:'Why This Matters',bullets:[
+      'Separates execution logic from data state',
+      'Makes responsibilities modular and scalable',
+      'Enables operational control and transparency'
+    ]},
+    {label:'Key Principle',callout:{text:'Processing Layers are capabilities that act across data states — they are not a pipeline. Data Ingestion touches Raw and Transaction; Data Control Panel touches all six data layers simultaneously.',color:'#0D9488'}},
+  ]},
   ai:{ badge:{label:'Cross-Cutting Intelligence',color:'#0D9488',bg:'#CCFAF6'}, title:'AI Engine Layer', desc:'Provides intelligence across the platform — assisting configuration, validating data state, generating insights, and detecting anomalies. The AI layer advises; humans decide.', sections:[
     {label:'Role',chips:[{t:'Assist',c:'#0D9488'},{t:'Validate',c:'#0D9488'},{t:'Explain',c:'#0D9488'},{t:'Recommend',c:'#0D9488'}]},
     {label:'AI-Assisted Configuration',bullets:['Schema mapping suggestions from source field patterns','Rule generation from historical transformation data','Auto-detection of mapping anomalies before execution']},
@@ -493,7 +537,7 @@ const DATA = {
     {label:'Processing at this layer',table:{cols:['Processing Layer','Capability'],rows:[['Data Ingestion','Source load, raw batch creation'],['Data Control Panel','Source validation, load audit']]}},
   ]},
 
-  'col-txn':{ badge:{label:'Data Layer 02',color:'#B45309',bg:'#FEF3C7'}, title:'Transaction Layer', desc:"Field-mapped, canonically structured records. Source fields split, merged, cast, and normalised to the platform's canonical schema.", sections:[
+  'col-txn':{ badge:{label:'Data Layer 02',color:'#B45309',bg:'#FEF3C7'}, title:'Transaction Layer', desc:"Field-mapped, canonically structured records. Source fields split, merged, cast, and normalised to the platform\'s canonical schema.", sections:[
     {label:'Characteristics',bullets:['All fields conform to the canonical schema — standardised names, types, formats','One-to-one relationship with raw rows at this stage','Full lineage back to source raw row preserved']},
     {label:'Processing at this layer',table:{cols:['Processing Layer','Capability'],rows:[['Data Ingestion','Schema mapping, field-level transformation'],['Data Transformation','Enrichment, derived field computation'],['Data Control Panel','Mapping audit, field-level validation']]}},
   ]},
@@ -552,7 +596,7 @@ const DATA = {
     {label:'What happens here',bullets:['Source data received: ERP export, SFTP file, API response','Written to Raw Tables with no modification whatsoever','Load metadata captured: source, timestamp, row count, file reference','Each load creates a versioned raw batch','Failed rows captured in load error log — not discarded']},
   ]},
 
-  'cell-ing-txn':{ badge:{label:'Ingestion × Transaction',color:'#B45309',bg:'#FEF3C7'}, title:'Schema Mapping & Field Transformation', desc:"Raw records mapped to the platform's canonical schema. Fields are split, cast, merged, and normalised.", sections:[
+  'cell-ing-txn':{ badge:{label:'Ingestion × Transaction',color:'#B45309',bg:'#FEF3C7'}, title:'Schema Mapping & Field Transformation', desc:"Raw records mapped to the platform\'s canonical schema. Fields are split, cast, merged, and normalised.", sections:[
     {label:'Operations',bullets:['Field splitting: e.g., full_name → first_name + last_name','Field merging: e.g., code_prefix + code_suffix → full_code','Type casting: "2024-01-31" (string) → date type','Normalisation: trim whitespace, standardise casing','Default assignment: apply configured defaults for null fields']},
     {label:'Output',bullets:['Transaction Table records: canonical schema, one row per source row','Lineage: Raw row → Transaction row (1:1 relationship)','Exception log: rows that could not be fully mapped']},
   ]},
@@ -663,6 +707,17 @@ function openPanel(id,el){
     if(s.chips){ h+=`<div class="p-chips">`; s.chips.forEach(c=>{ h+=`<span class="p-chip" style="color:${c.c};border-color:${c.c};background:${c.c}18">${c.t}</span>`; }); h+=`</div>`; }
     if(s.table){ h+=`<table class="p-table"><thead><tr>${s.table.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`; s.table.rows.forEach(r=>{ h+=`<tr>${r.map((v,i)=>`<td${i===0?` style="color:${d.badge.color};font-weight:600"`:''} >${v}</td>`).join('')}</tr>`; }); h+=`</tbody></table>`; }
     if(s.callout) h+=`<div class="p-callout" style="border-color:${s.callout.color}">${s.callout.text}</div>`;
+    if(s.flow){
+      h+='<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">';
+      s.flow.forEach(function(f,fi){
+        h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:${f.bg};border:1.5px solid ${f.color}">`;
+        h+=`<div style="width:10px;height:10px;border-radius:50%;background:${f.color};flex-shrink:0"></div>`;
+        h+=`<div style="flex:1"><div style="font-size:13px;font-weight:700;color:${f.color};line-height:1.2">${f.label}</div>`;
+        h+=`<div style="font-size:11px;color:#4B5680;margin-top:2px">${f.desc}</div></div></div>`;
+        if(fi < s.flow.length-1) h+=`<div style="text-align:center;color:#BFD0E8;font-size:13px;line-height:1;margin:-1px 0">↓</div>`;
+      });
+      h+='</div>';
+    }
     h+=`</div>`;
   });
   h+=`</div>`;
