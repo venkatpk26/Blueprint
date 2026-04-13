@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Platform Architecture — Data & Processing Model</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+–navy:    #0F1E35;
+–navy2:   #1A3050;
+–slate:   #2E4A6B;
+–mid:     #5E7A99;
+–muted:   #8FA3BC;
+–rule:    #D8E4F0;
+–bg:      #F4F7FB;
+–white:   #FFFFFF;
+–text:    #0F1E35;
+–teal:    #0D9488;
+–c-raw:   #64748B;  –c-raw-bg:  #F1F5F9;
+–c-txn:   #B45309;  –c-txn-bg:  #FEF3C7;
+–c-sch:   #1D4ED8;  –c-sch-bg:  #DBEAFE;
+–c-fct:   #15803D;  –c-fct-bg:  #DCFCE7;
+–c-sem:   #6D28D9;  –c-sem-bg:  #EDE9FE;
+–c-prd:   #9D174D;  –c-prd-bg:  #FCE7F3;
+}
+
+html { height: 100%; overflow: hidden; }
+body { height: 100%; font-family: ‘Inter’, sans-serif; background: var(–bg); color: var(–text); font-size: 16px; line-height: 1.5; display: flex; flex-direction: column; overflow: hidden; }
+
+/* HEADER */
+.header { background: var(–navy); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-shrink: 0; z-index: 100; position: relative; }
+.header-eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(–muted); margin-bottom: 3px; }
+.header-title { font-family: ‘Syne’, sans-serif; font-size: 20px; font-weight: 700; color: var(–white); }
+.header-sub { font-size: 14px; color: var(–muted); margin-top: 3px; max-width: 540px; }
+.header-hint { font-size: 13px; color: var(–muted); display: flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 6px 14px; white-space: nowrap; flex-shrink: 0; }
+.pulse { width: 6px; height: 6px; border-radius: 50%; background: var(–teal); animation: pulse 2.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* LAYOUT */
+.layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.canvas { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 14px 18px 20px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+/* PANEL */
+.panel { width: 0; overflow: hidden; transition: width .3s cubic-bezier(.4,0,.2,1); background: #FFFFFF; border-left: 1px solid #D8E4F0; flex-shrink: 0; height: 100%; display: flex; flex-direction: column; position: relative; }
+.panel.open { width: 380px; }
+.panel-scroll { width: 100%; height: 100%; overflow-y: scroll; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #CBD5E1 #F8FAFC; }
+.panel-top { padding: 16px 20px 14px; border-bottom: 1px solid #D8E4F0; position: sticky; top: 0; background: #FFFFFF; z-index: 20; }
+.panel-close { position: absolute; top: 14px; right: 14px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(–rule); background: var(–bg); color: var(–muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: all .15s; }
+.panel-close:hover { background: var(–rule); color: var(–text); }
+.p-badge { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; }
+.p-title { font-family: ‘Syne’, sans-serif; font-size: 18px; font-weight: 700; color: var(–navy); line-height: 1.3; margin-bottom: 5px; }
+.p-desc { font-size: 14px; color: var(–mid); line-height: 1.6; }
+.panel-body { padding: 16px 20px; }
+.p-section { margin-bottom: 18px; }
+.p-label { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(–muted); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(–rule); }
+.p-bullet { display: flex; gap: 8px; margin-bottom: 6px; align-items: flex-start; }
+.p-dot { width: 4px; height: 4px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.p-bullet-text { font-size: 14px; color: var(–text); line-height: 1.55; }
+.p-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.p-chip { font-size: 13px; font-weight: 500; padding: 3px 10px; border-radius: 12px; border: 1px solid; }
+.p-callout { background: var(–bg); border-left: 3px solid; border-radius: 0 6px 6px 0; padding: 10px 12px; font-size: 14px; color: var(–text); line-height: 1.6; margin-top: 6px; }
+.p-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.p-table th { text-align: left; padding: 5px 8px; background: var(–bg); color: var(–mid); font-weight: 500; font-size: 13px; border-bottom: 1px solid var(–rule); }
+.p-table td { padding: 6px 8px; border-bottom: 1px solid var(–rule); color: var(–text); vertical-align: top; }
+.p-table tr:last-child td { border-bottom: none; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+.panel.open .panel-scroll { animation: slideIn .25s ease; }
+
+/* AI BAND */
+.ai-band { flex-shrink: 0; background: #0F1E35 !important; border-radius: 10px; padding: 11px 16px; cursor: pointer; transition: all .18s; display: flex; align-items: center; gap: 16px; border: 2px solid #1C3A60; border-left: 4px solid #F59E0B; user-select: none; box-shadow: inset 0 0 60px rgba(245,158,11,.06); }
+.ai-band:hover { background: #152845 !important; border-color: #F59E0B; }
+.ai-band.active { border-color: #F59E0B !important; box-shadow: 0 0 0 2px rgba(245,158,11,.25), inset 0 0 60px rgba(245,158,11,.08); }
+.ai-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #F59E0B; margin-bottom: 2px; }
+.ai-name { font-family: ‘Syne’, sans-serif; font-size: 16px; font-weight: 700; color: #FFFFFF; }
+.ai-sep { width: 1px; height: 32px; background: rgba(255,255,255,.15); flex-shrink: 0; }
+.ai-caps { display: flex; gap: 7px; flex-wrap: wrap; }
+.ai-cap { font-size: 13px; color: #E2C97E; background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.25); border-radius: 6px; padding: 3px 9px; }
+.ai-arrow { margin-left: auto; color: rgba(255,255,255,.4); font-size: 20px; flex-shrink: 0; transition: transform .2s; }
+.ai-band.active .ai-arrow { transform: rotate(90deg); color: #F59E0B; }
+
+/* FLOW ROW */
+.flow-row { display: flex; align-items: center; padding: 0 2px; }
+.flow-spacer { width: 144px; flex-shrink: 0; }
+.flow-track { flex: 1; position: relative; height: 22px; display: flex; align-items: center; }
+.flow-line { position: absolute; left: 0; right: 14px; height: 1px; background: linear-gradient(to right, var(–c-raw), var(–c-txn), var(–c-sch), var(–c-fct), var(–c-sem), var(–c-prd)); }
+.flow-label { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(–muted); white-space: nowrap; background: var(–bg); padding: 0 6px; }
+.flow-tip { font-size: 13px; color: var(–c-prd); margin-left: 3px; }
+
+/* MATRIX */
+/* ── MATRIX TABLE LAYOUT ──────────────────────────────────────────────── */
+.matrix-wrap {
+background: #EBF1F8;
+border: 1.5px solid #C8D9EC;
+border-radius: 0 12px 12px 12px;
+padding: 10px;
+overflow: auto;
+flex: 1;
+min-height: 0;
+}
+/* Use a real HTML table for rock-solid equal columns */
+.matrix-table {
+width: 100%;
+min-width: 820px;
+border-collapse: separate;
+border-spacing: 5px;
+table-layout: fixed;
+}
+/* Corner cell */
+.matrix-table .corner {
+width: 140px;
+vertical-align: bottom;
+padding-bottom: 6px;
+}
+.proc-layers-label {
+font-size: 9px; font-weight: 700; letter-spacing: .1em;
+text-transform: uppercase; color: #5E7A99; line-height: 1.5;
+text-align: center;
+}
+/* Column header cells */
+.col-hdr {
+cursor: pointer;
+transition: all .18s;
+border-radius: 8px;
+padding: 10px 12px;
+vertical-align: top;
+border: 1.5px solid transparent;
+user-select: none;
+}
+.col-hdr:hover { box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+.col-hdr.active { outline: 2px solid currentColor; }
+.col-num {
+font-size: 10px; font-weight: 600; opacity: .6;
+letter-spacing: .06em; display: block; margin-bottom: 3px;
+}
+.col-name {
+font-size: 13px; font-weight: 700; line-height: 1.25;
+display: block; margin-bottom: 3px;
+}
+.col-desc {
+font-size: 10px; line-height: 1.4; opacity: .75;
+display: block;
+}
+/* Row header cells */
+.row-lbl {
+cursor: pointer;
+transition: all .18s;
+border-radius: 8px;
+padding: 12px 10px 12px 16px;
+background: #FFFFFF;
+border: 1.5px solid #C8D9EC;
+position: relative;
+user-select: none;
+vertical-align: middle;
+}
+.row-lbl:hover { box-shadow: 2px 0 14px rgba(0,0,0,.08); }
+.row-lbl.active { border-color: var(–navy); background: #F8FAFC; }
+.row-lbl-bar {
+position: absolute; left: 0; top: 0; bottom: 0;
+width: 4px; border-radius: 8px 0 0 8px;
+}
+.row-name { font-size: 13px; font-weight: 700; color: var(–navy); line-height: 1.3; }
+.row-sub  { font-size: 10px; color: var(–muted); line-height: 1.4; margin-top: 3px; }
+.row-tag  {
+display: inline-block; font-size: 9px; font-weight: 700;
+letter-spacing: .06em; text-transform: uppercase;
+padding: 2px 8px; border-radius: 5px; margin-top: 6px;
+}
+/* Data cells */
+.cell {
+cursor: pointer;
+transition: all .15s;
+border-radius: 8px;
+padding: 11px 12px;
+vertical-align: top;
+user-select: none;
+min-width: 120px;
+}
+.cell:hover { box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+.cell.active { box-shadow: 0 6px 20px rgba(0,0,0,.14); outline: 2px solid rgba(0,0,0,.15); }
+.cell-on  { border: 1.5px solid; }
+.cell-off {
+background: rgba(255,255,255,.45);
+border: 1.5px dashed #C8D9EC;
+cursor: default;
+text-align: center;
+}
+.cell-off::after { content: ‘—’; color: #C8D9EC; font-size: 14px; }
+.cell-off:hover { box-shadow: none; }
+.cell-tag {
+font-size: 9px; font-weight: 700; letter-spacing: .08em;
+text-transform: uppercase; display: block; margin-bottom: 5px;
+}
+.cell-item {
+font-size: 12px; color: var(–navy); line-height: 1.4;
+display: flex; align-items: flex-start; gap: 5px;
+margin-bottom: 3px;
+}
+.cell-item::before {
+content: ‘·’; color: var(–muted); flex-shrink: 0;
+font-size: 16px; line-height: 1.1;
+}
+
+/* GOV BAND */
+.gov-band { flex-shrink: 0; background: #EDF2F7 !important; border: 1.5px solid #BFD0E8; border-left: 4px solid #334155; border-radius: 10px; padding: 11px 16px; cursor: pointer; transition: all .18s; display: flex; align-items: center; gap: 16px; user-select: none; }
+.gov-band:hover { background: #E2EAF4 !important; border-color: #334155; box-shadow: 0 3px 14px rgba(0,0,0,.08); }
+.gov-band.active { background: #DCEAF8 !important; border-color: #0F1E35; box-shadow: 0 0 0 2px rgba(15,30,53,.12); }
+.gov-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #334155; margin-bottom: 2px; }
+.gov-name { font-family: ‘Syne’, sans-serif; font-size: 16px; font-weight: 700; color: #0F1E35; }
+.gov-sep { width: 1px; height: 32px; background: #BFD0E8; flex-shrink: 0; }
+.gov-group { display: flex; flex-direction: column; gap: 4px; }
+.gov-group-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #334155; }
+.gov-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.gov-tag { font-size: 13px; color: #2E4A6B; background: #FFFFFF; border: 1px solid #BFD0E8; border-radius: 6px; padding: 2px 8px; }
+.gov-arrow { margin-left: auto; color: #8FA3BC; font-size: 20px; flex-shrink: 0; transition: transform .2s; }
+.gov-band.active .gov-arrow { transform: rotate(90deg); color: #0F1E35; }
+
+/* LEGEND */
+.legend { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 2px 0; flex-shrink: 0; }
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(–muted); }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.leg-sep { width: 1px; height: 12px; background: var(–rule); }
+.leg-note { font-size: 13px; color: var(–muted); }
+
+/* Canvas scrollbar */
+.canvas::-webkit-scrollbar { width: 5px; }
+.canvas::-webkit-scrollbar-track { background: #F4F7FB; }
+.canvas::-webkit-scrollbar-thumb { background: #BFD0E8; border-radius: 3px; }
+.canvas::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+/* Panel scrollbar */
+.panel-scroll::-webkit-scrollbar { width: 7px; }
+.panel-scroll::-webkit-scrollbar-track { background: #F8FAFC; }
+.panel-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+.panel-scroll::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+/* Matrix horizontal scrollbar */
+.matrix-wrap::-webkit-scrollbar { height: 5px; }
+.matrix-wrap::-webkit-scrollbar-track { background: #EBF1F8; border-radius: 3px; }
+.matrix-wrap::-webkit-scrollbar-thumb { background: #BFD0E8; border-radius: 3px; }
+.matrix-wrap::-webkit-scrollbar-thumb:hover { background: #8FA3BC; }
+
+/* ── DATA LAYERS BAR (above matrix) ────────────────────────────────────── */
+.data-layers-bar {
+display: flex;
+align-items: stretch;
+gap: 4px;
+flex-shrink: 0;
+}
+.data-layers-bar-spacer {
+width: 130px;
+flex-shrink: 0;
+}
+.data-layers-bar-label {
+flex: 1;
+background: #0F1E35;
+border-radius: 6px 6px 0 0;
+padding: 7px 14px;
+display: flex;
+align-items: center;
+gap: 10px;
+margin-bottom: -4px;
+position: relative;
+z-index: 1;
+}
+.dlb-title {
+font-size: 11px;
+font-weight: 700;
+letter-spacing: .14em;
+text-transform: uppercase;
+color: #FFFFFF;
+}
+.dlb-arrow {
+font-size: 13px;
+color: rgba(255,255,255,.4);
+}
+.dlb-sub {
+font-size: 9px;
+color: rgba(255,255,255,.4);
+margin-left: auto;
+font-style: italic;
+}
+
+/* ── CORNER CELL ─────────────────────────────────────────────────────────── */
+.corner-cell {
+display: flex;
+align-items: flex-end;
+padding-bottom: 6px;
+}
+.proc-layers-label {
+font-size: 9px;
+font-weight: 600;
+letter-spacing: .1em;
+text-transform: uppercase;
+color: #5E7A99;
+line-height: 1.4;
+text-align: center;
+width: 100%;
+}
+
+/* Remove the old flow row styles */
+.flow-row, .flow-spacer, .flow-track, .flow-line, .flow-label, .flow-tip { display: none; }
+</style>
+
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <div class="header-eyebrow">Enterprise Data Platform</div>
+    <div class="header-title">Platform Architecture — Data &amp; Processing Model</div>
+    <div class="header-sub">A layered, governed, and intelligent platform separating data evolution, processing capabilities, and cross-cutting intelligence.</div>
+  </div>
+  <div class="header-hint"><div class="pulse"></div>Click any element to explore details</div>
+</header>
+
+<div class="layout">
+<div class="canvas" id="canvas">
+
+  <!-- AI BAND -->
+
+  <div class="ai-band" onclick="openPanel('ai',this)">
+    <div>
+      <div class="ai-eyebrow">⬡ Cross-Cutting Intelligence</div>
+      <div class="ai-name">AI Engine Layer</div>
+    </div>
+    <div class="ai-sep"></div>
+    <div class="ai-caps">
+      <div class="ai-cap">AI-Assisted Configuration</div>
+      <div class="ai-cap">Lineage &amp; Readiness</div>
+      <div class="ai-cap">Reporting &amp; Analytics</div>
+      <div class="ai-cap">Anomaly Detection</div>
+    </div>
+    <div class="ai-arrow">›</div>
+  </div>
+
+  <!-- MATRIX -->
+
+  <div class="data-layers-bar">
+    <div class="data-layers-bar-spacer"></div>
+    <div class="data-layers-bar-label">
+      <span class="dlb-title">Data Layers</span>
+      <span class="dlb-arrow">→</span>
+      <span class="dlb-sub">States of data maturity · click any column to explore</span>
+    </div>
+  </div>
+  <div class="matrix-wrap" id="matrix-wrap"><table class="matrix-table"><tbody>
+
+```
+<tr>
+  <td class="corner"><div class="proc-layers-label">Processing<br>Layers ↓</div></td>
+  <td class="col-hdr" style="background:#CDD5DE;color:var(--c-raw)" onclick="openPanel('col-raw',this)"><span class="col-num">01</span><span class="col-name">Raw</span><span class="col-desc">Source-aligned, unprocessed</span></td>
+  <td class="col-hdr" style="background:#F8D9B0;color:var(--c-txn)" onclick="openPanel('col-txn',this)"><span class="col-num">02</span><span class="col-name">Transaction</span><span class="col-desc">Canonical structured records</span></td>
+  <td class="col-hdr" style="background:#B8D4F5;color:var(--c-sch)" onclick="openPanel('col-sch',this)"><span class="col-num">03</span><span class="col-name">Schedule</span><span class="col-desc">Domain-level data (AP, AR, FA)</span></td>
+  <td class="col-hdr" style="background:#AEDDC0;color:var(--c-fct)" onclick="openPanel('col-fct',this)"><span class="col-num">04</span><span class="col-name">Fact</span><span class="col-desc">Integrated, analytics-ready</span></td>
+  <td class="col-hdr" style="background:#CFC4F0;color:var(--c-sem)" onclick="openPanel('col-sem',this)"><span class="col-num">05</span><span class="col-name">Semantic</span><span class="col-desc">Metrics &amp; abstractions</span></td>
+  <td class="col-hdr" style="background:#F0AACF;color:var(--c-prd)" onclick="openPanel('col-prd',this)"><span class="col-num">06</span><span class="col-name">Product / View</span><span class="col-desc">Dashboards, reports, APIs</span></td>
+</tr>
+
+<tr>
+  <td class="row-lbl" onclick="openPanel('row-ing',this)">
+    <div class="row-lbl-bar" style="background:#B45309"></div>
+    <div class="row-name">Data Ingestion</div>
+    <div class="row-sub">Source load · Schema normalisation</div>
+    <span class="row-tag" style="background:#FEF3C7;color:#B45309">Ingestion</span>
+  </td>
+  <td class="cell cell-on" style="background:var(--c-raw-bg);border-color:var(--c-raw)" onclick="openPanel('cell-ing-raw',this)"><span class="cell-tag" style="color:var(--c-raw)">Raw</span><div class="cell-item">Source Load</div><div class="cell-item">Raw Batch</div></td>
+  <td class="cell cell-on" style="background:var(--c-txn-bg);border-color:var(--c-txn)" onclick="openPanel('cell-ing-txn',this)"><span class="cell-tag" style="color:var(--c-txn)">Transaction</span><div class="cell-item">Schema Mapping</div><div class="cell-item">Field Transformation</div></td>
+  <td class="cell cell-off"></td><td class="cell cell-off"></td><td class="cell cell-off"></td><td class="cell cell-off"></td>
+</tr>
+
+<tr>
+  <td class="row-lbl" onclick="openPanel('row-trf',this)">
+    <div class="row-lbl-bar" style="background:#1D4ED8"></div>
+    <div class="row-name">Data Transformation</div>
+    <div class="row-sub">Enrichment · Reclass · Offset · Allocation</div>
+    <span class="row-tag" style="background:#DBEAFE;color:#1D4ED8">Transform</span>
+  </td>
+  <td class="cell cell-off"></td>
+  <td class="cell cell-on" style="background:var(--c-txn-bg);border-color:var(--c-txn)" onclick="openPanel('cell-trf-txn',this)"><span class="cell-tag" style="color:var(--c-txn)">Transaction</span><div class="cell-item">Enrichment</div><div class="cell-item">Derived Fields</div></td>
+  <td class="cell cell-on" style="background:var(--c-sch-bg);border-color:var(--c-sch)" onclick="openPanel('cell-trf-sch',this)"><span class="cell-tag" style="color:var(--c-sch)">Schedule</span><div class="cell-item">Classification</div><div class="cell-item">Schedule Rules</div></td>
+  <td class="cell cell-on" style="background:var(--c-fct-bg);border-color:var(--c-fct)" onclick="openPanel('cell-trf-fct',this)"><span class="cell-tag" style="color:var(--c-fct)">Fact</span><div class="cell-item">Offset · Reclass</div><div class="cell-item">Allocation</div></td>
+  <td class="cell cell-off"></td><td class="cell cell-off"></td>
+</tr>
+    <tr>
+  <td class="row-lbl" onclick="openPanel('row-prc',this)">
+    <div class="row-lbl-bar" style="background:#15803D"></div>
+    <div class="row-name">Data Processing</div>
+    <div class="row-sub">KPI engine · Aggregation · Metrics</div>
+    <span class="row-tag" style="background:#DCFCE7;color:#15803D">Compute</span>
+  </td>
+  <td class="cell cell-off"></td><td class="cell cell-off"></td>
+  <td class="cell cell-on" style="background:var(--c-sch-bg);border-color:var(--c-sch)" onclick="openPanel('cell-prc-sch',this)"><span class="cell-tag" style="color:var(--c-sch)">Schedule</span><div class="cell-item">Intermediate Aggregations</div></td>
+  <td class="cell cell-on" style="background:var(--c-fct-bg);border-color:var(--c-fct)" onclick="openPanel('cell-prc-fct',this)"><span class="cell-tag" style="color:var(--c-fct)">Fact</span><div class="cell-item">KPI Computation</div><div class="cell-item">Metric Engine</div></td>
+  <td class="cell cell-on" style="background:var(--c-sem-bg);border-color:var(--c-sem)" onclick="openPanel('cell-prc-sem',this)"><span class="cell-tag" style="color:var(--c-sem)">Semantic</span><div class="cell-item">Metric Models</div><div class="cell-item">Business Logic</div></td>
+  <td class="cell cell-off"></td>
+</tr>
+    <tr>
+  <td class="row-lbl" onclick="openPanel('row-viz',this)">
+    <div class="row-lbl-bar" style="background:#0D9488"></div>
+    <div class="row-name">Data Visualisation</div>
+    <div class="row-sub">Dashboards · Reports · APIs · Exports</div>
+    <span class="row-tag" style="background:#CCFBF1;color:#0D9488">Visualise</span>
+  </td>
+  <td class="cell cell-off"></td><td class="cell cell-off"></td><td class="cell cell-off"></td>
+  <td class="cell cell-on" style="background:var(--c-fct-bg);border-color:var(--c-fct)" onclick="openPanel('cell-viz-fct',this)"><span class="cell-tag" style="color:var(--c-fct)">Fact</span><div class="cell-item">Data APIs</div></td>
+  <td class="cell cell-on" style="background:var(--c-sem-bg);border-color:var(--c-sem)" onclick="openPanel('cell-viz-sem',this)"><span class="cell-tag" style="color:var(--c-sem)">Semantic</span><div class="cell-item">Query Models</div></td>
+  <td class="cell cell-on" style="background:var(--c-prd-bg);border-color:var(--c-prd)" onclick="openPanel('cell-viz-prd',this)"><span class="cell-tag" style="color:var(--c-prd)">Product</span><div class="cell-item">Dashboards</div><div class="cell-item">Reports · Exports</div></td>
+</tr>
+    <tr>
+  <td class="row-lbl" onclick="openPanel('row-ctl',this)">
+    <div class="row-lbl-bar" style="background:#6D28D9"></div>
+    <div class="row-name">Data Control Panel</div>
+    <div class="row-sub">Lineage · Staleness · Rerun · Audit</div>
+    <span class="row-tag" style="background:#EDE9FE;color:#6D28D9">Control</span>
+  </td>
+  <td class="cell cell-on" style="background:var(--c-raw-bg);border-color:var(--c-raw)" onclick="openPanel('cell-ctl-raw',this)"><span class="cell-tag" style="color:var(--c-raw)">Raw</span><div class="cell-item">Source Validation</div></td>
+  <td class="cell cell-on" style="background:var(--c-txn-bg);border-color:var(--c-txn)" onclick="openPanel('cell-ctl-txn',this)"><span class="cell-tag" style="color:var(--c-txn)">Transaction</span><div class="cell-item">Mapping Audit</div></td>
+  <td class="cell cell-on" style="background:var(--c-sch-bg);border-color:var(--c-sch)" onclick="openPanel('cell-ctl-sch',this)"><span class="cell-tag" style="color:var(--c-sch)">Schedule</span><div class="cell-item">Transformation Monitoring</div></td>
+  <td class="cell cell-on" style="background:var(--c-fct-bg);border-color:var(--c-fct)" onclick="openPanel('cell-ctl-fct',this)"><span class="cell-tag" style="color:var(--c-fct)">Fact</span><div class="cell-item">Staleness Detection</div></td>
+  <td class="cell cell-on" style="background:var(--c-sem-bg);border-color:var(--c-sem)" onclick="openPanel('cell-ctl-sem',this)"><span class="cell-tag" style="color:var(--c-sem)">Semantic</span><div class="cell-item">Lineage Console</div></td>
+  <td class="cell cell-on" style="background:var(--c-prd-bg);border-color:var(--c-prd)" onclick="openPanel('cell-ctl-prd',this)"><span class="cell-tag" style="color:var(--c-prd)">Product</span><div class="cell-item">Data Readiness</div></td>
+</tr>
+  </tbody></table></div><!-- /matrix-wrap -->
+```
+
+  <!-- GOV BAND -->
+
+  <div class="gov-band" onclick="openPanel('gov',this)">
+    <div>
+      <div class="gov-eyebrow">⬡ Cross-Cutting Control</div>
+      <div class="gov-name">Governance &amp; Infrastructure</div>
+    </div>
+    <div class="gov-sep"></div>
+    <div class="gov-group">
+      <div class="gov-group-label">Governance</div>
+      <div class="gov-tags">
+        <div class="gov-tag">Access Control</div><div class="gov-tag">Audit Logs</div>
+        <div class="gov-tag">Rule Approval</div><div class="gov-tag">Version Control</div><div class="gov-tag">Compliance</div>
+      </div>
+    </div>
+    <div class="gov-sep"></div>
+    <div class="gov-group">
+      <div class="gov-group-label">Infrastructure</div>
+      <div class="gov-tags">
+        <div class="gov-tag">Compute Orchestration</div><div class="gov-tag">Scheduling</div>
+        <div class="gov-tag">Storage</div><div class="gov-tag">Monitoring</div><div class="gov-tag">Logging</div>
+      </div>
+    </div>
+    <div class="gov-arrow">›</div>
+  </div>
+
+  <!-- LEGEND -->
+
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:var(--c-raw)"></div>Raw</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--c-txn)"></div>Transaction</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--c-sch)"></div>Schedule</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--c-fct)"></div>Fact</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--c-sem)"></div>Semantic</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--c-prd)"></div>Product / View</div>
+    <div class="leg-sep"></div>
+    <div class="leg-note">Filled cell = processing occurs &nbsp;·&nbsp; Dashed = not applicable &nbsp;·&nbsp; <kbd style="background:var(--rule);padding:1px 5px;border-radius:3px;font-size: 11px;font-family:inherit">Esc</kbd> to close</div>
+  </div>
+
+</div><!-- /canvas -->
+
+<div class="panel" id="panel">
+  <div class="panel-scroll" id="panel-inner"></div>
+</div>
+</div>
+
+<script>
+const DATA = {
+  ai:{ badge:{label:'Cross-Cutting Intelligence',color:'#0D9488',bg:'#CCFAF6'}, title:'AI Engine Layer', desc:'Provides intelligence across the platform — assisting configuration, validating data state, generating insights, and detecting anomalies. The AI layer advises; humans decide.', sections:[
+    {label:'Role',chips:[{t:'Assist',c:'#0D9488'},{t:'Validate',c:'#0D9488'},{t:'Explain',c:'#0D9488'},{t:'Recommend',c:'#0D9488'}]},
+    {label:'AI-Assisted Configuration',bullets:['Schema mapping suggestions from source field patterns','Rule generation from historical transformation data','Auto-detection of mapping anomalies before execution']},
+    {label:'AI Lineage & Readiness',bullets:['Lineage graph validation — broken or missing lineage detected','Stale data detection using freshness heuristics','Data readiness scoring per schedule and period']},
+    {label:'AI Reporting & Analytics',bullets:['Natural language query over lineage and run history','Narrative report generation for management packs','Trend analysis and cross-period variance']},
+    {label:'AI Anomaly Detection',bullets:['Statistical deviation alerts on run outputs','Unexpected balance swings flagged for review','Exception rate anomalies surfaced proactively']},
+    {label:'Governance Boundary',callout:{text:'The AI layer has read-only access to platform metadata. No suggestion is applied without explicit human approval. All suggestions are logged.',color:'#0D9488'}},
+  ]},
+
+  gov:{ badge:{label:'Cross-Cutting Control',color:'#2E4A6B',bg:'#E8EFF8'}, title:'Governance & Infrastructure', desc:'Enforces access, compliance, audit, and operational reliability across all data and processing layers.', sections:[
+    {label:'Governance',bullets:['Role-based access control (RBAC) at job, rule, and dataset level','Full audit logs — every configuration change, run, and approval','Rule approval workflows — four-eyes principle for production changes','Version control for all jobs and rules with rollback capability','Compliance controls — data retention, classification, lineage preservation']},
+    {label:'Infrastructure',bullets:['Compute orchestration — stateless workers, horizontal scale','Storage management — append-only lineage, partitioned run history','Scheduling — cron-based and dependency-triggered execution','Monitoring — run metrics, alerting, SLA tracking','Structured logging per run, row, and rule evaluation']},
+    {label:'Architectural Note',callout:{text:'This is NOT a pipeline. Data Layers = states of data maturity. Processing Layers = execution capabilities. Horizontal Bands = intelligence and governance overlays.',color:'#2E4A6B'}},
+  ]},
+
+  'col-raw':{ badge:{label:'Data Layer 01',color:'#64748B',bg:'#F1F5F9'}, title:'Raw Layer', desc:'Source-aligned, unprocessed data loaded exactly as received. Schema is source-native. Immutable once loaded.', sections:[
+    {label:'Characteristics',bullets:['Schema preserved exactly as received from ERP, SFTP, API, or file sources','No field renaming, type casting, or logic applied','Immutable — once loaded, raw data is never modified','Full load history preserved for reprocessing']},
+    {label:'Processing at this layer',table:{cols:['Processing Layer','Capability'],rows:[['Data Ingestion','Source load, raw batch creation'],['Data Control Panel','Source validation, load audit']]}},
+  ]},
+
+  'col-txn':{ badge:{label:'Data Layer 02',color:'#B45309',bg:'#FEF3C7'}, title:'Transaction Layer', desc:"Field-mapped, canonically structured records. Source fields split, merged, cast, and normalised to the platform's canonical schema.", sections:[
+    {label:'Characteristics',bullets:['All fields conform to the canonical schema — standardised names, types, formats','One-to-one relationship with raw rows at this stage','Full lineage back to source raw row preserved']},
+    {label:'Processing at this layer',table:{cols:['Processing Layer','Capability'],rows:[['Data Ingestion','Schema mapping, field-level transformation'],['Data Transformation','Enrichment, derived field computation'],['Data Control Panel','Mapping audit, field-level validation']]}},
+  ]},
+
+  'col-sch':{ badge:{label:'Data Layer 03',color:'#1D4ED8',bg:'#DBEAFE'}, title:'Schedule Layer', desc:'Domain-structured tables for AP, AR, FA, and other financial schedules. Data is enriched, classified, and aligned to the reference model.', sections:[
+    {label:'Characteristics',bullets:['Structured by financial schedule domain (AP, AR, Fixed Assets, etc.)','Classification rules applied: short-term / long-term, entity assignment','Reference model alignment — dimension codes resolved','Within-schedule transformations complete at this stage']},
+    {label:'Processing at this layer',table:{cols:['Processing Layer','Capability'],rows:[['Data Transformation','Classification, schedule-level rules'],['Data Processing','Intermediate aggregations'],['Data Control Panel','Transformation monitoring']]}},
+  ]},
+
+  'col-fct':{ badge:{label:'Data Layer 04',color:'#15803D',bg:'#DCFCE7'}, title:'Fact Layer', desc:'Cross-schedule integrated data. Business logic, derived metrics, offsetting, reclassification, and allocation applied. Analytics-ready.', sections:[
+    {label:'Characteristics',bullets:['Cross-schedule operations complete: offsetting, reclassification, allocation','Business-derived rows created (e.g., net payable = gross AP − advance offsets)','Full lineage from source raw rows through all transformations','Data APIs served from this layer for downstream consumption']},
+    {label:'Processing at this layer',table:{cols:['Processing Layer','Capability'],rows:[['Data Transformation','Offset, reclass, allocation'],['Data Processing','KPI computation, metric engine'],['Data Visualisation','Data APIs'],['Data Control Panel','Staleness detection']]}},
+  ]},
+
+  'col-sem':{ badge:{label:'Data Layer 05',color:'#6D28D9',bg:'#EDE9FE'}, title:'Semantic Layer', desc:'Metrics, dimensions, and business abstractions. A governed, business-friendly interface over the Fact layer.', sections:[
+    {label:'Characteristics',bullets:['Metric definitions: named, versioned, governed calculations','Dimension hierarchies: entity, time, geography, product, cost centre','Business terminology mapped to underlying data fields','Single source of truth for KPI definitions']},
+    {label:'Processing at this layer',table:{cols:['Processing Layer','Capability'],rows:[['Data Processing','Metric models, business logic'],['Data Visualisation','Query models'],['Data Control Panel','Lineage console']]}},
+  ]},
+
+  'col-prd':{ badge:{label:'Data Layer 06',color:'#9D174D',bg:'#FCE7F3'}, title:'Product / View Layer', desc:'Final consumption-ready outputs. Aggregated, summarised, and shaped for reporting, dashboards, APIs, and regulatory disclosures.', sections:[
+    {label:'Characteristics',bullets:['Pre-aggregated views optimised for end-user consumption','Dashboards, reports, and exports served from this layer','Data Readiness Console tracks which views are current','No further transformation — read-only consumption layer']},
+    {label:'Processing at this layer',table:{cols:['Processing Layer','Capability'],rows:[['Data Visualisation','Dashboards, reports, exports'],['Data Control Panel','Data readiness tracking']]}},
+  ]},
+
+  'row-ing':{ badge:{label:'Processing Layer',color:'#0F1E35',bg:'#E8EFF8'}, title:'Data Ingestion', desc:'Loads source data from ERP, SFTP, APIs, and file sources. Applies schema mapping and field-level transformation to produce Transaction layer records.', sections:[
+    {label:'Data Layer Scope',chips:[{t:'Raw',c:'#64748B'},{t:'Transaction',c:'#B45309'}]},
+    {label:'Capabilities',bullets:['Source connectivity: ERP, SFTP, REST API, Excel/CSV','Raw batch creation with full load metadata','Schema mapping: source field → canonical field','Field-level transformation: split, merge, cast, normalise','Validation rules: type checks, mandatory fields, range checks','Scheduling: manual, triggered, or recurring']},
+    {label:'Outputs',bullets:['Raw Tables: source-native, immutable records','Transaction Tables: canonically structured, field-mapped records','Load audit log: rows loaded, validation failures, timestamps']},
+  ]},
+
+  'row-trf':{ badge:{label:'Processing Layer',color:'#1A3050',bg:'#E8EFF8'}, title:'Data Transformation', desc:'Applies enrichment, reclassification, offsetting, and allocation rules across Transaction, Schedule, and Fact layers. The core logic execution layer.', sections:[
+    {label:'Data Layer Scope',chips:[{t:'Transaction',c:'#B45309'},{t:'Schedule',c:'#1D4ED8'},{t:'Fact',c:'#15803D'}]},
+    {label:'Transformation Types',table:{cols:['Type','Applies At'],rows:[['Field-Level','Raw → Transaction'],['Enrichment','Transaction → Schedule'],['Across-Row','Schedule → Fact'],['Allocation','Fact → Product']]}},
+    {label:'Rule Engine',bullets:['Rules versioned with effective_from / effective_to dates','Precedence-ordered evaluation — lower number fires first','Dependency chaining — rule outputs feed subsequent rules','Conflict detection and resolution with full audit trail']},
+    {label:'Key Principle',callout:{text:'Transformation is configuration, not code. All rules are versioned, governed objects — enabling non-developer authoring, governance, and auditability.',color:'#1A3050'}},
+  ]},
+
+  'row-prc':{ badge:{label:'Processing Layer',color:'#2E4A6B',bg:'#E8EFF8'}, title:'Data Processing', desc:'Applies KPI engine, aggregations, and metric derivation across Schedule, Fact, and Semantic layers.', sections:[
+    {label:'Data Layer Scope',chips:[{t:'Schedule',c:'#1D4ED8'},{t:'Fact',c:'#15803D'},{t:'Semantic',c:'#6D28D9'}]},
+    {label:'Capabilities',bullets:['Intermediate aggregations at the Schedule level','KPI computation engine: named, versioned metric calculations','Metric derivation: compound metrics from base metrics','Semantic metric models: business-defined KPI structures','Cross-period and cross-entity computations']},
+    {label:'Key Distinction',callout:{text:'Transformation ensures data correctness. Processing ensures business usefulness. These are separate, sequenced concerns.',color:'#2E4A6B'}},
+  ]},
+
+  'row-viz':{ badge:{label:'Processing Layer',color:'#0D9488',bg:'#E0F5F3'}, title:'Data Visualisation', desc:'Business consumption layer. Serves dashboards, reports, APIs, and exports from Fact, Semantic, and Product layers.', sections:[
+    {label:'Data Layer Scope',chips:[{t:'Fact',c:'#15803D'},{t:'Semantic',c:'#6D28D9'},{t:'Product / View',c:'#9D174D'}]},
+    {label:'Capabilities',bullets:['Data APIs: REST endpoints over Fact layer data','Query models: semantic layer query interface','Dashboards: pre-built analytical views','Reports: management and compliance output','Exports: Excel, CSV, PDF, regulatory formats','Data Readiness Console: surface view currency and completeness']},
+  ]},
+
+  'row-ctl':{ badge:{label:'Processing Layer',color:'#5E7A99',bg:'#EEF2F8'}, title:'Data Control Panel', desc:'Governance and observability layer spanning ALL data layers. Provides lineage, dependency management, staleness detection, rerun orchestration, and audit.', sections:[
+    {label:'Data Layer Scope',chips:[{t:'Raw',c:'#64748B'},{t:'Transaction',c:'#B45309'},{t:'Schedule',c:'#1D4ED8'},{t:'Fact',c:'#15803D'},{t:'Semantic',c:'#6D28D9'},{t:'Product',c:'#9D174D'}]},
+    {label:'Core Capabilities',table:{cols:['Capability','Description'],rows:[['Lineage Console','Navigate forward/backward lineage graph for any row'],['Job Management','Create, configure, activate, pause, retire transformation jobs'],['Dependency Graph','Visualise and manage job-to-job dependencies'],['Staleness Detection','Identify runs whose outputs may be outdated'],['Rerun Engine','Single job, dependency chain, or all-stale reruns'],['Exception Log','Track, assign, and resolve data exceptions']]}},
+    {label:'Architectural Note',callout:{text:'The Control Panel is the only processing layer that spans ALL data layers simultaneously. It is not a pipeline stage — it is an orthogonal governance capability.',color:'#5E7A99'}},
+  ]},
+
+  'cell-ing-raw':{ badge:{label:'Ingestion × Raw',color:'#64748B',bg:'#F1F5F9'}, title:'Source Load into Raw Layer', desc:'Raw data arrives from source systems and is persisted exactly as received — no modification.', sections:[
+    {label:'What happens here',bullets:['Source data received: ERP export, SFTP file, API response','Written to Raw Tables with no modification whatsoever','Load metadata captured: source, timestamp, row count, file reference','Each load creates a versioned raw batch','Failed rows captured in load error log — not discarded']},
+  ]},
+
+  'cell-ing-txn':{ badge:{label:'Ingestion × Transaction',color:'#B45309',bg:'#FEF3C7'}, title:'Schema Mapping & Field Transformation', desc:"Raw records mapped to the platform's canonical schema. Fields are split, cast, merged, and normalised.", sections:[
+    {label:'Operations',bullets:['Field splitting: e.g., full_name → first_name + last_name','Field merging: e.g., code_prefix + code_suffix → full_code','Type casting: "2024-01-31" (string) → date type','Normalisation: trim whitespace, standardise casing','Default assignment: apply configured defaults for null fields']},
+    {label:'Output',bullets:['Transaction Table records: canonical schema, one row per source row','Lineage: Raw row → Transaction row (1:1 relationship)','Exception log: rows that could not be fully mapped']},
+  ]},
+
+  'cell-trf-txn':{ badge:{label:'Transformation × Transaction',color:'#B45309',bg:'#FEF3C7'}, title:'Enrichment at Transaction Layer', desc:'New derived fields added to Transaction records using rule-based logic.', sections:[
+    {label:'Operations',bullets:['Single-field derivation: compute from one source field','Multi-field derivation: combine multiple source fields','Chained derivation: use output of one rule as input to next','Lookup enrichment: resolve value from reference table','Conditional enrichment: different logic based on field conditions']},
+  ]},
+
+  'cell-trf-sch':{ badge:{label:'Transformation × Schedule',color:'#1D4ED8',bg:'#DBEAFE'}, title:'Classification & Schedule Rules', desc:'Transaction records classified and structured into financial schedule domains.', sections:[
+    {label:'Operations',bullets:['Domain classification: assign records to AP, AR, FA schedule','Short-term / long-term split based on maturity date rules','Entity assignment from vendor/customer master reference','Within-schedule validation and completeness checks']},
+  ]},
+
+  'cell-trf-fct':{ badge:{label:'Transformation × Fact',color:'#15803D',bg:'#DCFCE7'}, title:'Offset, Reclass & Allocation', desc:'Cross-schedule operations performed. Records from multiple schedules combined, offset, reclassified, or split.', sections:[
+    {label:'Across-Row Operations',bullets:['Offsetting: match opposing entries across schedules, create net records','Reclassification: reassign records between categories','Balance correction: apply corrective adjustments','Cross-schedule netting: e.g., AP invoices vs. advance payments']},
+    {label:'Allocation Operations',bullets:['Fixed ratio allocation: split source value by defined percentages','Driver-based allocation: headcount, revenue, or other drivers','Lineage shape: 1:N (one source → many output rows)']},
+  ]},
+
+  'cell-prc-sch':{ badge:{label:'Processing × Schedule',color:'#1D4ED8',bg:'#DBEAFE'}, title:'Intermediate Aggregations', desc:'Schedule-level aggregations computed as an intermediate step before Fact-level KPI computation.', sections:[
+    {label:'What happens here',bullets:['Subtotals computed within each schedule domain','Period-level summaries: month, quarter, year','Entity-level rollups within a schedule','Results feed the KPI engine at the Fact layer']},
+  ]},
+
+  'cell-prc-fct':{ badge:{label:'Processing × Fact',color:'#15803D',bg:'#DCFCE7'}, title:'KPI Computation & Metric Engine', desc:'Named, versioned KPI calculations applied to Fact layer data to produce business metrics.', sections:[
+    {label:'KPI Engine',bullets:['KPIs are named, versioned configuration objects','Each KPI references the fact fields it aggregates','Compound KPIs built from other KPI outputs','Period comparison KPIs: current vs. prior period vs. budget']},
+    {label:'Metric Engine',bullets:['Derived metrics from base KPI outputs','Variance metrics: actuals vs. forecast, actuals vs. prior year','Ratio metrics: e.g., Days Sales Outstanding (DSO)','Threshold alerts: flag metrics outside defined bands']},
+  ]},
+
+  'cell-prc-sem':{ badge:{label:'Processing × Semantic',color:'#6D28D9',bg:'#EDE9FE'}, title:'Metric Models & Business Logic', desc:'Business-defined metric structures and dimension hierarchies resolved at the Semantic layer.', sections:[
+    {label:'Semantic Models',bullets:['Metric models define the business meaning of each KPI','Dimension hierarchies: entity → group, time → period → year','Business logic resolves how metrics roll up across dimensions','Query models expose semantic objects to visualisation tools','Governed definitions prevent metric inconsistency across reports']},
+  ]},
+
+  'cell-viz-fct':{ badge:{label:'Visualisation × Fact',color:'#15803D',bg:'#DCFCE7'}, title:'Data APIs', desc:'REST API endpoints served directly from Fact layer data for programmatic consumption.', sections:[
+    {label:'API Capabilities',bullets:['Paginated REST endpoints per dataset and period','Filter by entity, period, classification, and dimensions','Returns JSON with full field set and lineage reference','Bearer token authentication, rate-limited per client']},
+  ]},
+
+  'cell-viz-sem':{ badge:{label:'Visualisation × Semantic',color:'#6D28D9',bg:'#EDE9FE'}, title:'Query Models', desc:'Semantic layer query interface for business-term queries over governed metric definitions.', sections:[
+    {label:'Query Model Features',bullets:['Business-term queries: "Net Payable for Entity A, Q1 2025"','Auto-resolution of dimension hierarchies','Consistent metric definitions regardless of querying tool','Supports BI tool connectivity (JDBC/ODBC)']},
+  ]},
+
+  'cell-viz-prd':{ badge:{label:'Visualisation × Product',color:'#9D174D',bg:'#FCE7F3'}, title:'Dashboards, Reports & Exports', desc:'End-user consumption surfaces built on the Product / View layer.', sections:[
+    {label:'Dashboards',bullets:['Pre-built analytical views with period selectors','KPI trend charts, variance analysis, drill-down capability','Data Readiness indicator per dashboard']},
+    {label:'Reports & Exports',bullets:['Structured management reports (PDF, formatted Excel)','Regulatory submission formats','Scheduled delivery via email or storage','AI-generated narrative summaries alongside data']},
+  ]},
+
+  'cell-ctl-raw':{ badge:{label:'Control × Raw',color:'#64748B',bg:'#F1F5F9'}, title:'Source Validation', desc:'Validates source data completeness and quality before transformation begins.', sections:[
+    {label:'Validations',bullets:['Completeness check: expected source files/feeds received','Row count reconciliation: received vs. expected volume','Structural validation: required fields present and typed','Duplicate detection: same source record loaded twice','Late arrival detection: data received after cutoff']},
+  ]},
+
+  'cell-ctl-txn':{ badge:{label:'Control × Transaction',color:'#B45309',bg:'#FEF3C7'}, title:'Mapping Audit', desc:'Full audit trail of every field-level mapping decision applied during ingestion.', sections:[
+    {label:'Audit Captures',bullets:['Which rule version was applied per field per row','Field values before and after mapping','Exceptions raised during mapping with resolution','Reconciliation: source field count vs. canonical field count']},
+  ]},
+
+  'cell-ctl-sch':{ badge:{label:'Control × Schedule',color:'#1D4ED8',bg:'#DBEAFE'}, title:'Transformation Monitoring', desc:'Real-time and historical monitoring of transformation jobs at the Schedule layer.', sections:[
+    {label:'Monitoring Surfaces',bullets:['Job run status: queued, running, completed, failed','Row-level metrics: scanned, matched, transformed, excepted','Rule match rates: which rules fired, at what frequency','Duration tracking: alert when run exceeds 2× historical average']},
+  ]},
+
+  'cell-ctl-fct':{ badge:{label:'Control × Fact',color:'#15803D',bg:'#DCFCE7'}, title:'Staleness Detection', desc:'Monitors Fact layer outputs and marks them stale when inputs have changed.', sections:[
+    {label:'Staleness Triggers',table:{cols:['Reason Code','Cause'],rows:[['source_data_updated','Source row changed after run completed'],['rule_version_changed','New rule version now applies to this period'],['dependency_rerun','Upstream job produced different output'],['filter_scope_changed','Job scope configuration modified']]}},
+    {label:'Resolution',bullets:['Staleness propagates downstream through lineage graph','Rerun policy determines automatic vs. manual resolution','Data Readiness Console reflects current staleness state']},
+  ]},
+
+  'cell-ctl-sem':{ badge:{label:'Control × Semantic',color:'#6D28D9',bg:'#EDE9FE'}, title:'Lineage Console', desc:'Full graph-based lineage navigation across all layers, from Product view back to Raw source row.', sections:[
+    {label:'Console Capabilities',bullets:['Forward traversal: given a Raw row, show all downstream outputs','Backward traversal: given a Product row, trace all source rows','Per-hop metadata: rule version, job, run, timestamp','Full path traced across multiple jobs and transformation stages','Export lineage as JSON for external audit']},
+  ]},
+
+  'cell-ctl-prd':{ badge:{label:'Control × Product',color:'#9D174D',bg:'#FCE7F3'}, title:'Data Readiness', desc:'Tracks whether each Product view is current, complete, and based on fully-processed upstream data.', sections:[
+    {label:'Readiness Signals',table:{cols:['Signal','Meaning'],rows:[['🟢 Green','All upstream layers current, no staleness, no exceptions'],['🟡 Amber','Completed with exceptions — outputs available but flagged'],['🔴 Red','Upstream layer stale or failed — view may be outdated'],['⚫ Grey','Not yet processed for this period']]}},
+    {label:'Rerun Modes',bullets:['Single job rerun: re-execute one job for a specific period','Dependency chain rerun: job + all downstream dependents','All-stale rerun: resolve all stale runs in topological order','Dry-run: validate scope and rules without writing output']},
+  ]},
+};
+
+let activeEl=null, activeId=null;
+
+
+// ── Matrix height recalculator ──────────────────────────────────────────────
+function recalcMatrix() {
+  const canvas = document.getElementById('canvas');
+  const wrap   = document.getElementById('matrix-wrap');
+  if (!canvas || !wrap) return;
+  requestAnimationFrame(function() {
+    var canvasH = canvas.clientHeight;
+    var usedH = 28; // padding top+bottom
+    var children = canvas.children;
+    for (var i = 0; i < children.length; i++) {
+      if (children[i] === wrap) continue;
+      usedH += children[i].offsetHeight + 6;
+    }
+    var available = Math.max(canvasH - usedH, 300);
+    wrap.style.height = available + 'px';
+    wrap.style.flex = 'none';
+  });
+}
+window.addEventListener('resize', recalcMatrix);
+window.addEventListener('load', function(){ recalcMatrix(); setTimeout(recalcMatrix,200); });
+function openPanel(id,el){
+  if(activeId===id){closePanel();return;}
+  if(activeEl) activeEl.classList.remove('active');
+  activeId=id; activeEl=el; el.classList.add('active');
+  const d=DATA[id]; if(!d) return;
+  let h=`<div class="panel-top" style="border-top:3px solid ${d.badge.color}">
+    <button class="panel-close" onclick="closePanel()">✕</button>
+    <div class="p-badge" style="background:${d.badge.bg};color:${d.badge.color}">${d.badge.label}</div>
+    <div class="p-title">${d.title}</div>
+    <div class="p-desc">${d.desc}</div>
+  </div><div class="panel-body">`;
+  d.sections.forEach(s=>{
+    h+=`<div class="p-section"><div class="p-label">${s.label}</div>`;
+    if(s.bullets) s.bullets.forEach(b=>{ h+=`<div class="p-bullet"><div class="p-dot" style="background:${d.badge.color}"></div><div class="p-bullet-text">${b}</div></div>`; });
+    if(s.chips){ h+=`<div class="p-chips">`; s.chips.forEach(c=>{ h+=`<span class="p-chip" style="color:${c.c};border-color:${c.c};background:${c.c}18">${c.t}</span>`; }); h+=`</div>`; }
+    if(s.table){ h+=`<table class="p-table"><thead><tr>${s.table.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`; s.table.rows.forEach(r=>{ h+=`<tr>${r.map((v,i)=>`<td${i===0?` style="color:${d.badge.color};font-weight:600"`:''} >${v}</td>`).join('')}</tr>`; }); h+=`</tbody></table>`; }
+    if(s.callout) h+=`<div class="p-callout" style="border-color:${s.callout.color}">${s.callout.text}</div>`;
+    h+=`</div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('panel-inner').innerHTML=h;
+  document.getElementById('panel').classList.add('open');
+  setTimeout(recalcMatrix, 350);
+}
+function closePanel(){
+  if(activeEl) activeEl.classList.remove('active');
+  activeEl=null; activeId=null;
+  document.getElementById('panel').classList.remove('open');
+  setTimeout(recalcMatrix, 400);
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closePanel(); });
+</script>
+
+</body>
+</html>
