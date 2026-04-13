@@ -5,7 +5,7 @@
 </head>
 <body>
 
-<p><a href="Blueprint.html">HTML Images</a></p>
+<p><a href="Blueprint.html">Blueprint</a></p>
 
 </body>
 </html>
