@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Page Title</title>
+<title>FinALyzer 3.0</title>
 </head>
 <body>
 
