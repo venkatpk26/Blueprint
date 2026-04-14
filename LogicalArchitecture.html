@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logical Architecture — Data × Processing × Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+–navy:    #0F1E35;
+–navy2:   #1A3050;
+–slate:   #2E4A6B;
+–mid:     #5E7A99;
+–muted:   #8FA3BC;
+–rule:    #D8E4F0;
+–bg:      #F4F7FB;
+–white:   #FFFFFF;
+–text:    #0F1E35;
+–teal:    #0D9488;
+/* Row colours — processing layers */
+–ing:  #B45309;  –ing-bg:  #FEF3C7;
+–trf:  #1D4ED8;  –trf-bg:  #DBEAFE;
+–prc:  #15803D;  –prc-bg:  #DCFCE7;
+–viz:  #0D9488;  –viz-bg:  #CCFBF1;
+–ctl:  #6D28D9;  –ctl-bg:  #EDE9FE;
+/* Column colours — metadata components */
+–ref:  #64748B;  –ref-bg:  #F1F5F9;
+–map:  #B45309;  –map-bg:  #FEF3C7;
+–trm:  #1D4ED8;  –trm-bg:  #DBEAFE;
+–cmp:  #15803D;  –cmp-bg:  #DCFCE7;
+–sem:  #6D28D9;  –sem-bg:  #EDE9FE;
+–prd:  #9D174D;  –prd-bg:  #FCE7F3;
+–lin:  #0D9488;  –lin-bg:  #CCFBF1;
+}
+
+html { height: 100%; overflow: hidden; }
+body { height: 100%; font-family: ‘Inter’, sans-serif; background: var(–bg); color: var(–text); font-size: 16px; line-height: 1.5; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── HEADER ─────────────────────────────────────────────────────────────── */
+.header { background: var(–navy); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-shrink: 0; z-index: 100; position: relative; }
+.header-eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(–muted); margin-bottom: 3px; }
+.header-title { font-family: ‘Syne’, sans-serif; font-size: 20px; font-weight: 700; color: var(–white); }
+.header-sub { font-size: 13px; color: var(–muted); margin-top: 3px; max-width: 580px; line-height: 1.5; }
+.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.header-hint { font-size: 12px; color: var(–muted); display: flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 5px 12px; white-space: nowrap; }
+.pulse { width: 6px; height: 6px; border-radius: 50%; background: var(–teal); animation: pulse 2.5s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* ── VIEW TOGGLE ────────────────────────────────────────────────────────── */
+.view-toggle { display: flex; gap: 4px; }
+.vt-btn {
+font-family: ‘Inter’, sans-serif; font-size: 11px; font-weight: 600;
+padding: 4px 12px; border-radius: 20px; cursor: pointer;
+border: 1.5px solid rgba(255,255,255,.18); color: var(–muted);
+background: transparent; transition: all .18s; letter-spacing: .04em;
+user-select: none;
+}
+.vt-btn:hover { border-color: rgba(255,255,255,.35); color: rgba(255,255,255,.7); }
+.vt-btn.active-base { background: var(–navy2); border-color: var(–slate); color: var(–white); }
+.vt-btn.active-ai   { background: rgba(245,158,11,.2); border-color: #F59E0B; color: #F59E0B; }
+.vt-btn.active-gov  { background: rgba(100,116,139,.2); border-color: #94A3B8; color: #CBD5E1; }
+
+/* ── LAYOUT ─────────────────────────────────────────────────────────────── */
+.layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.canvas { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+/* ── PANEL ──────────────────────────────────────────────────────────────── */
+.panel { width: 0; overflow: hidden; transition: width .3s cubic-bezier(.4,0,.2,1); background: #FFFFFF; border-left: 1px solid #D8E4F0; flex-shrink: 0; height: 100%; display: flex; flex-direction: column; position: relative; }
+.panel.open { width: 380px; }
+.panel-scroll { width: 100%; height: 100%; overflow-y: scroll; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #CBD5E1 #F8FAFC; }
+.panel-top { padding: 16px 20px 14px; border-bottom: 1px solid #D8E4F0; position: sticky; top: 0; background: #FFFFFF; z-index: 20; }
+.panel-close { position: absolute; top: 14px; right: 14px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(–rule); background: var(–bg); color: var(–muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: all .15s; }
+.panel-close:hover { background: var(–rule); color: var(–text); }
+.p-badge { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; }
+.p-title { font-family: ‘Syne’, sans-serif; font-size: 18px; font-weight: 700; color: var(–navy); line-height: 1.3; margin-bottom: 5px; }
+.p-desc { font-size: 14px; color: var(–mid); line-height: 1.6; }
+.panel-body { padding: 16px 20px; }
+.p-section { margin-bottom: 18px; }
+.p-label { font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(–muted); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(–rule); }
+.p-bullet { display: flex; gap: 8px; margin-bottom: 6px; align-items: flex-start; }
+.p-dot { width: 4px; height: 4px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
+.p-bullet-text { font-size: 14px; color: var(–text); line-height: 1.55; }
+.p-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.p-chip { font-size: 13px; font-weight: 500; padding: 3px 10px; border-radius: 12px; border: 1px solid; }
+.p-callout { background: var(–bg); border-left: 3px solid; border-radius: 0 6px 6px 0; padding: 10px 12px; font-size: 14px; color: var(–text); line-height: 1.6; margin-top: 6px; }
+.p-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.p-table th { text-align: left; padding: 5px 8px; background: var(–bg); color: var(–mid); font-weight: 500; font-size: 13px; border-bottom: 1px solid var(–rule); }
+.p-table td { padding: 6px 8px; border-bottom: 1px solid var(–rule); color: var(–text); vertical-align: top; }
+.p-table tr:last-child td { border-bottom: none; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+.panel.open .panel-scroll { animation: slideIn .25s ease; }
+
+/* ── AI BAND ────────────────────────────────────────────────────────────── */
+.ai-band { flex-shrink: 0; background: #0F1E35 !important; border-radius: 10px; padding: 11px 16px; cursor: pointer; transition: all .18s; display: flex; align-items: center; gap: 16px; border: 2px solid #1C3A60; border-left: 4px solid #F59E0B; user-select: none; }
+.ai-band:hover { background: #152845 !important; border-color: #F59E0B; }
+.ai-band.active { border-color: #F59E0B !important; box-shadow: 0 0 0 2px rgba(245,158,11,.25); }
+.ai-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #F59E0B; margin-bottom: 2px; }
+.ai-name { font-family: ‘Syne’, sans-serif; font-size: 15px; font-weight: 700; color: #FFFFFF; }
+.ai-sep { width: 1px; height: 28px; background: rgba(255,255,255,.15); flex-shrink: 0; }
+.ai-caps { display: flex; gap: 6px; flex-wrap: wrap; }
+.ai-cap { font-size: 12px; color: #E2C97E; background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.25); border-radius: 6px; padding: 3px 8px; }
+.ai-arrow { margin-left: auto; color: rgba(255,255,255,.4); font-size: 18px; flex-shrink: 0; transition: transform .2s; }
+.ai-band.active .ai-arrow { transform: rotate(90deg); color: #F59E0B; }
+/* AI overlay highlight on cells */
+.overlay-ai .cell-on { box-shadow: 0 0 0 2px #F59E0B, 0 0 12px rgba(245,158,11,.25); }
+.overlay-ai .ai-band { box-shadow: 0 0 0 2px #F59E0B !important; }
+
+/* ── GOV BAND ────────────────────────────────────────────────────────────── */
+.gov-band { flex-shrink: 0; background: #EDF2F7 !important; border-radius: 10px; padding: 11px 16px; cursor: pointer; transition: all .18s; display: flex; align-items: center; gap: 16px; border: 1.5px solid #BFD0E8; border-left: 4px solid #334155; user-select: none; }
+.gov-band:hover { background: #E2EAF4 !important; border-color: #334155; }
+.gov-band.active { background: #DCEAF8 !important; border-color: var(–navy); }
+.gov-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #334155; margin-bottom: 2px; }
+.gov-name { font-family: ‘Syne’, sans-serif; font-size: 15px; font-weight: 700; color: #0F1E35; }
+.gov-sep { width: 1px; height: 28px; background: #BFD0E8; flex-shrink: 0; }
+.gov-group { display: flex; flex-direction: column; gap: 3px; }
+.gov-group-label { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #334155; }
+.gov-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.gov-tag { font-size: 12px; color: #2E4A6B; background: #FFFFFF; border: 1px solid #BFD0E8; border-radius: 6px; padding: 2px 8px; }
+.gov-arrow { margin-left: auto; color: #8FA3BC; font-size: 18px; flex-shrink: 0; transition: transform .2s; }
+.gov-band.active .gov-arrow { transform: rotate(90deg); color: #0F1E35; }
+/* Gov overlay highlight */
+.overlay-gov .cell-on { box-shadow: 0 0 0 2px #334155, 0 0 10px rgba(51,65,85,.2); }
+.overlay-gov .gov-band { box-shadow: 0 0 0 2px #334155 !important; }
+
+/* ── DATA LAYERS BAR ────────────────────────────────────────────────────── */
+.data-layers-bar { display: flex; align-items: stretch; gap: 4px; flex-shrink: 0; cursor: pointer; transition: opacity .15s; }
+.data-layers-bar:hover { opacity: .85; }
+.data-layers-bar-spacer { width: 140px; flex-shrink: 0; }
+.data-layers-bar-label { flex: 1; background: #0F1E35; border-radius: 8px 8px 0 0; padding: 7px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: -4px; position: relative; z-index: 1; }
+.dlb-title { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #FFFFFF; }
+.dlb-arrow { font-size: 13px; color: rgba(255,255,255,.4); }
+.dlb-sub { font-size: 9px; color: rgba(255,255,255,.4); margin-left: auto; font-style: italic; }
+
+/* ── MATRIX ──────────────────────────────────────────────────────────────── */
+.matrix-wrap { background: #EBF1F8; border: 1.5px solid #C8D9EC; border-radius: 0 12px 12px 12px; padding: 10px; overflow: auto; flex: 1; min-height: 0; }
+.matrix-table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 5px; table-layout: fixed; }
+.matrix-table .corner { width: 140px; vertical-align: bottom; padding-bottom: 6px; cursor: pointer; }
+.proc-layers-label { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #5E7A99; line-height: 1.5; text-align: center; transition: color .15s; text-decoration: underline dotted; text-underline-offset: 3px; }
+td.corner:hover .proc-layers-label { color: #0F1E35; }
+
+.col-hdr { cursor: pointer; transition: all .18s; border-radius: 8px; padding: 10px 12px; vertical-align: top; border: 1.5px solid transparent; user-select: none; }
+.col-hdr:hover { box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+.col-hdr.active { outline: 2px solid currentColor; }
+.col-num { font-size: 10px; font-weight: 600; opacity: .6; letter-spacing: .06em; display: block; margin-bottom: 3px; }
+.col-name { font-size: 13px; font-weight: 700; line-height: 1.25; display: block; margin-bottom: 3px; }
+.col-desc { font-size: 10px; line-height: 1.4; opacity: .75; display: block; }
+
+.row-lbl { cursor: pointer; transition: all .18s; border-radius: 8px; padding: 12px 10px 12px 16px; background: #FFFFFF; border: 1.5px solid #C8D9EC; position: relative; user-select: none; vertical-align: middle; }
+.row-lbl:hover { box-shadow: 2px 0 14px rgba(0,0,0,.08); }
+.row-lbl.active { border-color: var(–navy); background: #F8FAFC; }
+.row-lbl-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 8px 0 0 8px; }
+.row-name { font-size: 13px; font-weight: 700; color: var(–navy); line-height: 1.25; }
+.row-sub  { font-size: 10px; color: var(–muted); line-height: 1.4; margin-top: 3px; }
+.row-tag  { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 5px; margin-top: 6px; }
+
+.cell { cursor: pointer; transition: all .15s; border-radius: 8px; padding: 11px 12px; vertical-align: top; user-select: none; min-width: 110px; }
+.cell:hover { box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+.cell.active { box-shadow: 0 6px 20px rgba(0,0,0,.14); outline: 2px solid rgba(0,0,0,.15); }
+.cell-on  { border: 1.5px solid; }
+.cell-off { background: rgba(255,255,255,.45); border: 1.5px dashed #C8D9EC; cursor: default; text-align: center; }
+.cell-off::after { content: ‘—’; color: #C8D9EC; font-size: 14px; }
+.cell-off:hover { box-shadow: none; }
+.cell-tag { font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; display: block; margin-bottom: 5px; }
+.cell-item { font-size: 12px; color: var(–navy); line-height: 1.4; display: flex; align-items: flex-start; gap: 5px; margin-bottom: 3px; }
+.cell-item::before { content: ‘·’; color: var(–muted); flex-shrink: 0; font-size: 16px; line-height: 1.1; }
+
+/* ── LEGEND ──────────────────────────────────────────────────────────────── */
+.legend { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 2px 0; flex-shrink: 0; }
+.leg-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(–muted); }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.leg-sep { width: 1px; height: 12px; background: var(–rule); }
+.leg-note { font-size: 12px; color: var(–muted); }
+
+/* ── SCROLLBARS ──────────────────────────────────────────────────────────── */
+.canvas::-webkit-scrollbar { width: 5px; }
+.canvas::-webkit-scrollbar-track { background: #F4F7FB; }
+.canvas::-webkit-scrollbar-thumb { background: #BFD0E8; border-radius: 3px; }
+.panel-scroll::-webkit-scrollbar { width: 6px; }
+.panel-scroll::-webkit-scrollbar-track { background: #F8FAFC; }
+.panel-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+.panel-scroll::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+.matrix-wrap::-webkit-scrollbar { height: 5px; width: 5px; }
+.matrix-wrap::-webkit-scrollbar-track { background: #EBF1F8; }
+.matrix-wrap::-webkit-scrollbar-thumb { background: #BFD0E8; border-radius: 3px; }
+</style>
+
+</head>
+<body>
+
+<!-- HEADER -->
+
+<header class="header">
+  <div>
+    <div class="header-eyebrow">Enterprise Data Platform</div>
+    <div class="header-title">Platform Architecture — Data × Processing × Intelligence</div>
+    <div class="header-sub">A layered, metadata-driven platform where data evolves across layers, processing operates across states, and intelligence and governance act as cross-cutting overlays.</div>
+  </div>
+  <div class="header-right">
+    <div class="view-toggle">
+      <button class="vt-btn active-base" id="btn-base" onclick="setView('base')">Base Architecture</button>
+      <button class="vt-btn" id="btn-ai"   onclick="setView('ai')">AI Overlay</button>
+      <button class="vt-btn" id="btn-gov"  onclick="setView('gov')">Governance Overlay</button>
+    </div>
+    <div class="header-hint"><div class="pulse"></div>Click any element to explore details</div>
+  </div>
+</header>
+
+<div class="layout">
+<div class="canvas" id="canvas">
+
+  <!-- AI BAND -->
+
+  <div class="ai-band" onclick="openPanel('ai',this)">
+    <div>
+      <div class="ai-eyebrow">⬡ Cross-Cutting Intelligence</div>
+      <div class="ai-name">AI Engine Layer</div>
+    </div>
+    <div class="ai-sep"></div>
+    <div class="ai-caps">
+      <div class="ai-cap">AI-Assisted Configuration</div>
+      <div class="ai-cap">AI Lineage &amp; Readiness</div>
+      <div class="ai-cap">AI Reporting &amp; Analytics</div>
+      <div class="ai-cap">AI Anomaly Detection</div>
+    </div>
+    <div class="ai-arrow">›</div>
+  </div>
+
+  <!-- METADATA LAYERS BAR -->
+
+  <div class="data-layers-bar" onclick="openPanel('meta-layers',this)">
+    <div class="data-layers-bar-spacer"></div>
+    <div class="data-layers-bar-label">
+      <span class="dlb-title">Metadata Components</span>
+      <span class="dlb-arrow">→</span>
+      <span class="dlb-sub">Runtime is governed by metadata · click to explore</span>
+    </div>
+  </div>
+
+  <!-- MATRIX -->
+
+  <div class="matrix-wrap" id="matrix-wrap">
+    <table class="matrix-table">
+      <tbody>
+
+```
+    <!-- HEADER ROW: corner + 7 metadata columns -->
+    <tr>
+      <td class="corner" onclick="openPanel('proc-layers',this)">
+        <div class="proc-layers-label">Processing<br>Layers ↓</div>
+      </td>
+      <td class="col-hdr" style="background:#DDE3E9;color:var(--ref)" onclick="openPanel('col-ref',this)">
+        <span class="col-num">M1</span><span class="col-name">Reference Model</span><span class="col-desc">Canonical structure &amp; dimensions</span>
+      </td>
+      <td class="col-hdr" style="background:#F8D9B0;color:var(--map)" onclick="openPanel('col-map',this)">
+        <span class="col-num">M2</span><span class="col-name">Mapping Metadata</span><span class="col-desc">Field &amp; schema mapping rules</span>
+      </td>
+      <td class="col-hdr" style="background:#B8D4F5;color:var(--trm)" onclick="openPanel('col-trm',this)">
+        <span class="col-num">M3</span><span class="col-name">Transformation Metadata</span><span class="col-desc">Rule definitions &amp; versioning</span>
+      </td>
+      <td class="col-hdr" style="background:#AEDDC0;color:var(--cmp)" onclick="openPanel('col-cmp',this)">
+        <span class="col-num">M4</span><span class="col-name">Computation Metadata</span><span class="col-desc">KPI &amp; metric definitions</span>
+      </td>
+      <td class="col-hdr" style="background:#CFC4F0;color:var(--sem)" onclick="openPanel('col-sem',this)">
+        <span class="col-num">M5</span><span class="col-name">Semantic Metadata</span><span class="col-desc">Business terms &amp; dimensions</span>
+      </td>
+      <td class="col-hdr" style="background:#F5C6E0;color:var(--prd)" onclick="openPanel('col-prd',this)">
+        <span class="col-num">M6</span><span class="col-name">Product Metadata</span><span class="col-desc">Report &amp; dashboard definitions</span>
+      </td>
+      <td class="col-hdr" style="background:#B2EAE4;color:var(--lin)" onclick="openPanel('col-lin',this)">
+        <span class="col-num">M7</span><span class="col-name">Lineage / Control</span><span class="col-desc">Dependency, staleness, audit</span>
+      </td>
+    </tr>
+
+    <!-- ROW: Data Ingestion -->
+    <tr>
+      <td class="row-lbl" onclick="openPanel('row-ing',this)">
+        <div class="row-lbl-bar" style="background:var(--ing)"></div>
+        <div class="row-name">Data Ingestion</div>
+        <div class="row-sub">Source load · Map · Normalise · Validate</div>
+        <span class="row-tag" style="background:var(--ing-bg);color:var(--ing)">Ingestion</span>
+      </td>
+      <td class="cell cell-on" style="background:var(--ref-bg);border-color:var(--ref)" onclick="openPanel('cell-ing-ref',this)">
+        <span class="cell-tag" style="color:var(--ref)">Reference Model</span>
+        <div class="cell-item">Canonical schema definitions</div>
+        <div class="cell-item">Domain classification codes</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--map-bg);border-color:var(--map)" onclick="openPanel('cell-ing-map',this)">
+        <span class="cell-tag" style="color:var(--map)">Mapping</span>
+        <div class="cell-item">Source-to-canonical field maps</div>
+        <div class="cell-item">Validation rule definitions</div>
+      </td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-on" style="background:var(--lin-bg);border-color:var(--lin)" onclick="openPanel('cell-ing-lin',this)">
+        <span class="cell-tag" style="color:var(--lin)">Lineage / Control</span>
+        <div class="cell-item">Source validation audit</div>
+        <div class="cell-item">Load lineage capture</div>
+      </td>
+    </tr>
+
+    <!-- ROW: Data Transformation -->
+    <tr>
+      <td class="row-lbl" onclick="openPanel('row-trf',this)">
+        <div class="row-lbl-bar" style="background:var(--trf)"></div>
+        <div class="row-name">Data Transformation</div>
+        <div class="row-sub">Enrich · Classify · Reclass · Offset · Allocate</div>
+        <span class="row-tag" style="background:var(--trf-bg);color:var(--trf)">Transform</span>
+      </td>
+      <td class="cell cell-on" style="background:var(--ref-bg);border-color:var(--ref)" onclick="openPanel('cell-trf-ref',this)">
+        <span class="cell-tag" style="color:var(--ref)">Reference Model</span>
+        <div class="cell-item">Reference alignment</div>
+        <div class="cell-item">Dimension lookups</div>
+      </td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-on" style="background:var(--trm-bg);border-color:var(--trm)" onclick="openPanel('cell-trf-trm',this)">
+        <span class="cell-tag" style="color:var(--trm)">Transformation</span>
+        <div class="cell-item">Rule groups &amp; versioning</div>
+        <div class="cell-item">Precedence &amp; dependencies</div>
+        <div class="cell-item">Conflict resolution config</div>
+      </td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-on" style="background:var(--lin-bg);border-color:var(--lin)" onclick="openPanel('cell-trf-lin',this)">
+        <span class="cell-tag" style="color:var(--lin)">Lineage / Control</span>
+        <div class="cell-item">Rule execution lineage</div>
+        <div class="cell-item">Staleness detection</div>
+      </td>
+    </tr>
+
+    <!-- ROW: Data Processing -->
+    <tr>
+      <td class="row-lbl" onclick="openPanel('row-prc',this)">
+        <div class="row-lbl-bar" style="background:var(--prc)"></div>
+        <div class="row-name">Data Processing</div>
+        <div class="row-sub">Aggregate · Roll up · Compute KPIs &amp; Metrics</div>
+        <span class="row-tag" style="background:var(--prc-bg);color:var(--prc)">Compute</span>
+      </td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-on" style="background:var(--cmp-bg);border-color:var(--cmp)" onclick="openPanel('cell-prc-cmp',this)">
+        <span class="cell-tag" style="color:var(--cmp)">Computation</span>
+        <div class="cell-item">KPI definitions &amp; versions</div>
+        <div class="cell-item">Metric derivation logic</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--sem-bg);border-color:var(--sem)" onclick="openPanel('cell-prc-sem',this)">
+        <span class="cell-tag" style="color:var(--sem)">Semantic</span>
+        <div class="cell-item">Metric model structure</div>
+        <div class="cell-item">Dimension hierarchies</div>
+      </td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-on" style="background:var(--lin-bg);border-color:var(--lin)" onclick="openPanel('cell-prc-lin',this)">
+        <span class="cell-tag" style="color:var(--lin)">Lineage / Control</span>
+        <div class="cell-item">KPI output lineage</div>
+        <div class="cell-item">Computation audit</div>
+      </td>
+    </tr>
+
+    <!-- ROW: Data Visualisation -->
+    <tr>
+      <td class="row-lbl" onclick="openPanel('row-viz',this)">
+        <div class="row-lbl-bar" style="background:var(--viz)"></div>
+        <div class="row-name">Data Visualisation</div>
+        <div class="row-sub">Serve dashboards · Reports · APIs · Exports</div>
+        <span class="row-tag" style="background:var(--viz-bg);color:var(--viz)">Visualise</span>
+      </td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-off"></td>
+      <td class="cell cell-on" style="background:var(--sem-bg);border-color:var(--sem)" onclick="openPanel('cell-viz-sem',this)">
+        <span class="cell-tag" style="color:var(--sem)">Semantic</span>
+        <div class="cell-item">Query model definitions</div>
+        <div class="cell-item">Business term mappings</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--prd-bg);border-color:var(--prd)" onclick="openPanel('cell-viz-prd',this)">
+        <span class="cell-tag" style="color:var(--prd)">Product</span>
+        <div class="cell-item">Dashboard &amp; report layouts</div>
+        <div class="cell-item">Access &amp; publish rules</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--lin-bg);border-color:var(--lin)" onclick="openPanel('cell-viz-lin',this)">
+        <span class="cell-tag" style="color:var(--lin)">Lineage / Control</span>
+        <div class="cell-item">Data readiness status</div>
+        <div class="cell-item">Output certification</div>
+      </td>
+    </tr>
+
+    <!-- ROW: Data Control Panel -->
+    <tr>
+      <td class="row-lbl" onclick="openPanel('row-ctl',this)">
+        <div class="row-lbl-bar" style="background:var(--ctl)"></div>
+        <div class="row-name">Data Control Panel</div>
+        <div class="row-sub">Lineage · Staleness · Rerun · Readiness · Audit</div>
+        <span class="row-tag" style="background:var(--ctl-bg);color:var(--ctl)">Control</span>
+      </td>
+      <td class="cell cell-on" style="background:var(--ref-bg);border-color:var(--ref)" onclick="openPanel('cell-ctl-ref',this)">
+        <span class="cell-tag" style="color:var(--ref)">Reference Model</span>
+        <div class="cell-item">Reference change governance</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--map-bg);border-color:var(--map)" onclick="openPanel('cell-ctl-map',this)">
+        <span class="cell-tag" style="color:var(--map)">Mapping</span>
+        <div class="cell-item">Mapping audit trail</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--trm-bg);border-color:var(--trm)" onclick="openPanel('cell-ctl-trm',this)">
+        <span class="cell-tag" style="color:var(--trm)">Transformation</span>
+        <div class="cell-item">Rule version audit</div>
+        <div class="cell-item">Staleness propagation</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--cmp-bg);border-color:var(--cmp)" onclick="openPanel('cell-ctl-cmp',this)">
+        <span class="cell-tag" style="color:var(--cmp)">Computation</span>
+        <div class="cell-item">KPI validation log</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--sem-bg);border-color:var(--sem)" onclick="openPanel('cell-ctl-sem',this)">
+        <span class="cell-tag" style="color:var(--sem)">Semantic</span>
+        <div class="cell-item">Definition audit trail</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--prd-bg);border-color:var(--prd)" onclick="openPanel('cell-ctl-prd',this)">
+        <span class="cell-tag" style="color:var(--prd)">Product</span>
+        <div class="cell-item">Report publish audit</div>
+      </td>
+      <td class="cell cell-on" style="background:var(--lin-bg);border-color:var(--lin)" onclick="openPanel('cell-ctl-lin',this)">
+        <span class="cell-tag" style="color:var(--lin)">Lineage / Control</span>
+        <div class="cell-item">Full lineage graph</div>
+        <div class="cell-item">Dependency graph</div>
+        <div class="cell-item">Rerun engine</div>
+      </td>
+    </tr>
+
+  </tbody>
+</table>
+```
+
+  </div><!-- /matrix-wrap -->
+
+  <!-- GOV BAND -->
+
+  <div class="gov-band" onclick="openPanel('gov',this)">
+    <div>
+      <div class="gov-eyebrow">⬡ Cross-Cutting Control</div>
+      <div class="gov-name">Governance &amp; Infrastructure</div>
+    </div>
+    <div class="gov-sep"></div>
+    <div class="gov-group">
+      <div class="gov-group-label">Governance</div>
+      <div class="gov-tags">
+        <div class="gov-tag">Access Control</div>
+        <div class="gov-tag">Audit Logs</div>
+        <div class="gov-tag">Rule Approval</div>
+        <div class="gov-tag">Version Control</div>
+        <div class="gov-tag">Compliance</div>
+      </div>
+    </div>
+    <div class="gov-sep"></div>
+    <div class="gov-group">
+      <div class="gov-group-label">Infrastructure</div>
+      <div class="gov-tags">
+        <div class="gov-tag">Compute</div>
+        <div class="gov-tag">Storage</div>
+        <div class="gov-tag">Scheduling</div>
+        <div class="gov-tag">Monitoring</div>
+        <div class="gov-tag">Logging</div>
+      </div>
+    </div>
+    <div class="gov-arrow">›</div>
+  </div>
+
+  <!-- LEGEND -->
+
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:var(--ref)"></div>Reference</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--map)"></div>Mapping</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--trm)"></div>Transformation</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--cmp)"></div>Computation</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--sem)"></div>Semantic</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--prd)"></div>Product</div>
+    <div class="leg-item"><div class="leg-dot" style="background:var(--lin)"></div>Lineage/Control</div>
+    <div class="leg-sep"></div>
+    <div class="leg-note">Filled = metadata governs this intersection &nbsp;·&nbsp; Dashed = not applicable &nbsp;·&nbsp; <kbd style="background:var(--rule);padding:1px 5px;border-radius:3px;font-size:11px">Esc</kbd> to close</div>
+  </div>
+
+</div><!-- /canvas -->
+
+<div class="panel" id="panel">
+  <div class="panel-scroll" id="panel-inner"></div>
+</div>
+</div>
+
+<script>
+const DATA = {
+
+  /* ── CONCEPT PANELS ──────────────────────────────────────────────────── */
+  'meta-layers':{ badge:{label:'Architecture Concept',color:'#0F1E35',bg:'#E2EAF4'}, title:'Metadata Components', desc:'Metadata is the governing layer of the platform. Runtime execution reads metadata to know what to do, how to do it, and what the output should look like — without hardcoding logic into code.', sections:[
+    {label:'What They Mean',bullets:['Metadata defines behaviour; runtime executes it','Each component governs a specific domain of platform logic','Changes to metadata propagate automatically to execution — no code deployment']},
+    {label:'Component Flow',flow:[
+      {label:'Reference Model',      color:'#64748B',bg:'#F1F5F9',  desc:'Canonical structure, dimension codes, entity hierarchies'},
+      {label:'Mapping Metadata',     color:'#B45309',bg:'#FEF3C7',  desc:'Source-to-canonical field mapping rules'},
+      {label:'Transformation Metadata',color:'#1D4ED8',bg:'#DBEAFE',desc:'Rule definitions, versioning, precedence, dependencies'},
+      {label:'Computation Metadata', color:'#15803D',bg:'#DCFCE7',  desc:'KPI and metric definitions, derivation logic'},
+      {label:'Semantic Metadata',    color:'#6D28D9',bg:'#EDE9FE',  desc:'Business terms, dimension hierarchies, query models'},
+      {label:'Product Metadata',     color:'#9D174D',bg:'#FCE7F3',  desc:'Dashboard layouts, report definitions, access rules'},
+      {label:'Lineage / Control',    color:'#0D9488',bg:'#CCFBF1',  desc:'Dependency graphs, staleness state, audit records'},
+    ]},
+    {label:'Key Principle',callout:{text:'Metadata defines behavior; runtime executes it. This separation means logic can be changed, versioned, and governed without touching application code.',color:'#0F1E35'}},
+  ]},
+
+  'proc-layers':{ badge:{label:'Architecture Concept',color:'#0D9488',bg:'#CCFBF1'}, title:'Data Processing Layers', desc:'Processing Layers represent the platform\'s execution capabilities. Each layer acts on data using metadata as its instruction set — reading rules, applying logic, and writing results with full lineage.', sections:[
+    {label:'What They Mean',bullets:['Each processing layer has a specific execution responsibility','All layers are governed by metadata — not hardcoded logic','Processing layers operate across multiple metadata components simultaneously']},
+    {label:'Layer Flow',flow:[
+      {label:'Data Ingestion',      color:'#B45309',bg:'#FEF3C7',desc:'Load, map, normalise, validate from source'},
+      {label:'Data Transformation', color:'#1D4ED8',bg:'#DBEAFE',desc:'Enrich, classify, reclass, offset, allocate'},
+      {label:'Data Processing',     color:'#15803D',bg:'#DCFCE7',desc:'Aggregate, roll up, compute KPIs and metrics'},
+      {label:'Data Visualisation',  color:'#0D9488',bg:'#CCFBF1',desc:'Serve dashboards, reports, and APIs'},
+      {label:'Data Control Panel',  color:'#6D28D9',bg:'#EDE9FE',desc:'Track lineage, staleness, reruns, readiness'},
+    ]},
+    {label:'Key Principle',callout:{text:'Separation of execution logic from data state. Processing layers act on data — they do not own it. Each layer reads from metadata and writes with lineage.',color:'#0D9488'}},
+  ]},
+
+  /* ── AI PANEL ─────────────────────────────────────────────────────────── */
+  ai:{ badge:{label:'Cross-Cutting Intelligence',color:'#F59E0B',bg:'#FEF3C7'}, title:'AI Engine Layer', desc:'Provides intelligence across the platform. In Base view, AI assists. In AI Overlay, see exactly where AI acts on each processing × metadata intersection.', sections:[
+    {label:'Role',chips:[{t:'Assist',c:'#F59E0B'},{t:'Validate',c:'#F59E0B'},{t:'Explain',c:'#F59E0B'},{t:'Recommend',c:'#F59E0B'}]},
+    {label:'AI × Processing Layers',table:{cols:['Processing Layer','AI Capability'],rows:[
+      ['Data Ingestion','Suggest schema mapping · Detect ingestion anomalies'],
+      ['Data Transformation','Suggest rules · Detect conflicts · Identify missing logic'],
+      ['Data Processing','Validate KPI outputs · Detect abnormal metrics'],
+      ['Data Visualisation','Generate insights · Explain trends · Suggest dashboards'],
+      ['Data Control Panel','Identify stale jobs · Recommend reruns · Surface root causes'],
+    ]}},
+    {label:'AI × Metadata Components',table:{cols:['Metadata Component','AI Capability'],rows:[
+      ['Reference Model','Suggest missing structures · Validate completeness'],
+      ['Mapping Metadata','Suggest mappings · Detect inconsistencies'],
+      ['Transformation Metadata','Suggest rules · Detect conflicts'],
+      ['Computation Metadata','Validate KPI definitions'],
+      ['Semantic Metadata','Improve naming and structure'],
+      ['Product Metadata','Recommend layout improvements'],
+      ['Lineage / Control','Analyse lineage graph · Detect breakpoints · Recommend reruns'],
+    ]}},
+    {label:'Governance Boundary',callout:{text:'AI augments the system without controlling execution. All AI suggestions require human approval. The AI layer has read-only access to platform metadata.',color:'#F59E0B'}},
+  ]},
+
+  /* ── GOV PANEL ───────────────────────────────────────────────────────── */
+  gov:{ badge:{label:'Cross-Cutting Control',color:'#334155',bg:'#E2EAF4'}, title:'Governance & Infrastructure', desc:'Enforces access, compliance, audit, and operational reliability across all processing and metadata layers. In Governance Overlay, see exactly which intersections are governed.', sections:[
+    {label:'Governance × Processing Layers',table:{cols:['Processing Layer','Governance Control'],rows:[
+      ['Data Ingestion','Source onboarding approval · Interface validation controls'],
+      ['Data Transformation','Rule approval workflows · Version control · Audit trails'],
+      ['Data Processing','KPI validation governance · Metric certification'],
+      ['Data Visualisation','Report certification · Access control'],
+      ['Data Control Panel','Audit logs · Full operational traceability'],
+    ]}},
+    {label:'Governance × Metadata Components',table:{cols:['Metadata Component','Governance Control'],rows:[
+      ['Reference Model','Controlled changes to structure'],
+      ['Mapping Metadata','Approval before deployment'],
+      ['Transformation Metadata','Rule version governance'],
+      ['Computation Metadata','KPI certification'],
+      ['Semantic Metadata','Standard definition enforcement'],
+      ['Product Metadata','Report publishing control'],
+      ['Lineage / Control Metadata','Audit and compliance tracking'],
+    ]}},
+    {label:'Key Insight',callout:{text:'Governance is not a gate — it is a continuous control layer. Every metadata change, every rule deployment, every report publication is subject to governance controls.',color:'#334155'}},
+  ]},
+
+  /* ── COLUMN PANELS — Metadata Components ─────────────────────────────── */
+  'col-ref':{ badge:{label:'Metadata Component M1',color:'#64748B',bg:'#F1F5F9'}, title:'Reference Model', desc:'The canonical structure of the platform. Defines entity hierarchies, dimension codes, classification schemes, and master data that all other components reference.', sections:[
+    {label:'What it contains',bullets:['Entity hierarchies: legal entity, business unit, cost centre','Dimension codes: geography, product, time, counterparty','Classification schemes: short-term/long-term, asset classes','Domain definitions: AP, AR, FA schedule structures']},
+    {label:'Who uses it',table:{cols:['Layer','Usage'],rows:[
+      ['Data Ingestion','Canonical schema definitions for field mapping'],
+      ['Data Transformation','Reference alignment and dimension lookups'],
+      ['Data Control Panel','Reference change governance and audit'],
+    ]}},
+    {label:'Governance',bullets:['Controlled change process — no direct edits in production','All changes versioned with effective dates','Impact analysis required before any structural change']},
+  ]},
+
+  'col-map':{ badge:{label:'Metadata Component M2',color:'#B45309',bg:'#FEF3C7'}, title:'Mapping Metadata', desc:'Defines how source data fields map to the canonical schema. Every ingestion pipeline is governed by mapping metadata — no field transformation is hardcoded.', sections:[
+    {label:'What it contains',bullets:['Source-to-canonical field mapping definitions','Field-level transformation rules (split, merge, cast, normalise)','Validation rules: type, mandatory, range, referential integrity','Default value assignments for null/missing source fields']},
+    {label:'Who uses it',table:{cols:['Layer','Usage'],rows:[
+      ['Data Ingestion','Drives all schema mapping and field-level transformation'],
+      ['Data Control Panel','Mapping audit trail and change governance'],
+    ]}},
+    {label:'AI Interaction',bullets:['AI suggests mappings based on field name and type similarity','AI detects inconsistencies across mapping versions','AI flags missing mappings before pipeline activation']},
+  ]},
+
+  'col-trm':{ badge:{label:'Metadata Component M3',color:'#1D4ED8',bg:'#DBEAFE'}, title:'Transformation Metadata', desc:'Governs all transformation logic across the platform. Rule definitions, versioning, precedence, dependency chains, and conflict resolution are all expressed as metadata.', sections:[
+    {label:'What it contains',bullets:['Rule definitions: field-level, enrichment, across-row, allocation','Rule versioning: effective_from / effective_to dates per rule','Rule groups: ordered collections referenced by transformation jobs','Precedence configuration: which rule fires when multiple match','Dependency chains: rule A output feeds rule B input','Conflict resolution: fallback values or exception policy']},
+    {label:'Who uses it',table:{cols:['Layer','Usage'],rows:[
+      ['Data Transformation','Primary consumer — executes rules at runtime'],
+      ['Data Control Panel','Rule version audit, staleness detection, rerun eligibility'],
+    ]}},
+    {label:'Key Principle',callout:{text:'No transformation logic lives in application code. Every transformation is a versioned metadata record. Changing a rule is a metadata operation — not a deployment.',color:'#1D4ED8'}},
+  ]},
+
+  'col-cmp':{ badge:{label:'Metadata Component M4',color:'#15803D',bg:'#DCFCE7'}, title:'Computation Metadata', desc:'Defines all KPI and metric computations. Named, versioned definitions that the computation engine reads at runtime — no metric logic is hardcoded.', sections:[
+    {label:'What it contains',bullets:['KPI definitions: formula, base fields, aggregation scope','Metric versioning: effective dates for retroactive recalculation','Compound metrics: metrics built from other metric outputs','Period comparison definitions: vs prior period, vs budget','Threshold definitions: alert bands for metric monitoring']},
+    {label:'Who uses it',table:{cols:['Layer','Usage'],rows:[
+      ['Data Processing','Primary consumer — executes KPI and metric computations'],
+      ['Data Control Panel','KPI validation log and computation audit'],
+    ]}},
+    {label:'AI Interaction',bullets:['AI validates KPI output against historical patterns','AI detects abnormal metric values before surfacing to dashboards','AI suggests refinements to KPI definitions based on usage patterns']},
+  ]},
+
+  'col-sem':{ badge:{label:'Metadata Component M5',color:'#6D28D9',bg:'#EDE9FE'}, title:'Semantic Metadata', desc:'Makes the platform\'s data model understandable to business users. Governs metric naming, dimension hierarchies, and query models that visualisation tools consume.', sections:[
+    {label:'What it contains',bullets:['Metric model structures: named business metrics with governed definitions','Dimension hierarchies: how entities, time, and other dims aggregate','Business term mappings: jargon to underlying field definitions','Query model definitions: semantic objects exposed to BI tools','Single source of truth for all KPI naming and structure']},
+    {label:'Who uses it',table:{cols:['Layer','Usage'],rows:[
+      ['Data Processing','Metric model structure and dimension hierarchies'],
+      ['Data Visualisation','Query models and business term mappings'],
+      ['Data Control Panel','Semantic definition audit trail'],
+    ]}},
+  ]},
+
+  'col-prd':{ badge:{label:'Metadata Component M6',color:'#9D174D',bg:'#FCE7F3'}, title:'Product Metadata', desc:'Governs the presentation layer — dashboard layouts, report structures, API definitions, and publishing rules. All product outputs are metadata-driven.', sections:[
+    {label:'What it contains',bullets:['Dashboard layout definitions: widget positions, filters, drill-paths','Report structure definitions: columns, groupings, formatting','API endpoint definitions: fields, filters, pagination, auth scope','Data Readiness rules: which upstream layers must be current before publishing','Access control rules: who can view, export, or publish each product']},
+    {label:'Who uses it',table:{cols:['Layer','Usage'],rows:[
+      ['Data Visualisation','Primary consumer — renders dashboards and reports'],
+      ['Data Control Panel','Report publish audit and certification'],
+    ]}},
+    {label:'Governance',bullets:['All new reports require approval before publishing','Layout changes are version-controlled','Access rule changes logged with approver and timestamp']},
+  ]},
+
+  'col-lin':{ badge:{label:'Metadata Component M7',color:'#0D9488',bg:'#CCFBF1'}, title:'Lineage / Control Metadata', desc:'The operational backbone. Records every source-to-target relationship, tracks job state, propagates staleness, and enables controlled reruns across all layers.', sections:[
+    {label:'What it contains',bullets:['Lineage records: every source-to-target transformation with job and rule reference','Dependency graph: job-to-job execution dependencies','Staleness state: which outputs are current vs outdated','Rerun eligibility: which jobs can be rerun and in what order','Job execution history: runs, status, metrics, exceptions','Audit log: all configuration changes across all metadata components']},
+    {label:'Who uses it',table:{cols:['Layer','Usage'],rows:[
+      ['Data Ingestion','Load lineage capture'],
+      ['Data Transformation','Rule execution lineage, staleness detection'],
+      ['Data Processing','Computation output lineage'],
+      ['Data Visualisation','Data readiness status, output certification'],
+      ['Data Control Panel','Primary owner — reads and writes all control metadata'],
+    ]}},
+    {label:'Key Principle',callout:{text:'Full observability: lineage, staleness, rerun = complete control. Every output can be traced to its source. Every stale output can be identified and resolved.',color:'#0D9488'}},
+  ]},
+
+  /* ── ROW PANELS — Processing Layers ──────────────────────────────────── */
+  'row-ing':{ badge:{label:'Processing Layer',color:'#B45309',bg:'#FEF3C7'}, title:'Data Ingestion', desc:'Loads source data from ERP, SFTP, REST APIs, and file sources. Applies schema mapping and field-level transformation rules driven entirely by mapping metadata.', sections:[
+    {label:'Metadata consumed',chips:[{t:'Reference Model',c:'#64748B'},{t:'Mapping Metadata',c:'#B45309'},{t:'Lineage / Control',c:'#0D9488'}]},
+    {label:'What it does',bullets:['Connects to source systems: ERP, SFTP, REST API, Excel/CSV','Reads mapping metadata to determine field-to-canonical translation','Applies field-level rules: split, merge, cast, normalise, default','Validates against reference model: entity codes, dimension lookups','Writes raw batch to Raw layer and canonical records to Transaction layer','Captures lineage: raw row → transaction row for every record','Logs all exceptions: unmatched rows, validation failures, type errors']},
+    {label:'Governance at this layer',bullets:['Source system onboarding requires reference model alignment','Mapping changes require approval before activation','All loads produce an immutable audit record']},
+    {label:'AI at this layer',bullets:['Suggests field mappings based on name and type analysis','Detects ingestion anomalies: unexpected volumes, missing fields','Flags potential mapping gaps before pipeline activation']},
+  ]},
+
+  'row-trf':{ badge:{label:'Processing Layer',color:'#1D4ED8',bg:'#DBEAFE'}, title:'Data Transformation', desc:'Applies enrichment, classification, reclassification, offsetting, and allocation rules. All logic is governed by transformation metadata — no hardcoded logic in execution.', sections:[
+    {label:'Metadata consumed',chips:[{t:'Reference Model',c:'#64748B'},{t:'Transformation Metadata',c:'#1D4ED8'},{t:'Lineage / Control',c:'#0D9488'}]},
+    {label:'Transformation types',table:{cols:['Type','Applies at','Description'],rows:[
+      ['Field-Level','Raw → Transaction','Split, merge, cast, normalise individual fields'],
+      ['Enrichment','Transaction → Schedule','Add derived fields using rule-based logic'],
+      ['Across-Row','Schedule → Fact','Reclass, offset, balance correction across rows'],
+      ['Allocation','Fact → Product','Distribute values to multiple targets (1:N lineage)'],
+    ]}},
+    {label:'Rule engine behaviour',bullets:['Rules resolved to correct version by effective date at runtime','Precedence-ordered evaluation — lower number fires first','Dependency chains: rule A output available to rule B','Conflict detection and resolution with full audit trail','Unmatched rows raise typed exceptions — never silently dropped']},
+    {label:'AI at this layer',bullets:['Suggests transformation rules from historical patterns','Detects rule conflicts before activation','Identifies logic gaps: rows that match no rule and have no fallback']},
+  ]},
+
+  'row-prc':{ badge:{label:'Processing Layer',color:'#15803D',bg:'#DCFCE7'}, title:'Data Processing', desc:'Executes KPI computation and metric derivation. Reads computation and semantic metadata at runtime — all metric logic is versioned configuration, not deployed code.', sections:[
+    {label:'Metadata consumed',chips:[{t:'Computation Metadata',c:'#15803D'},{t:'Semantic Metadata',c:'#6D28D9'},{t:'Lineage / Control',c:'#0D9488'}]},
+    {label:'What it does',bullets:['Reads KPI definitions from computation metadata','Executes metric computations: aggregations, ratios, period comparisons','Builds semantic metric models for BI tool consumption','Resolves dimension hierarchies from semantic metadata','Produces Fact and Semantic layer outputs with full lineage','Flags outputs that breach threshold bands defined in computation metadata']},
+    {label:'AI at this layer',bullets:['Validates KPI outputs against historical statistical patterns','Detects abnormal metric values before they surface to dashboards','Suggests KPI definition refinements based on usage analysis']},
+  ]},
+
+  'row-viz':{ badge:{label:'Processing Layer',color:'#0D9488',bg:'#CCFBF1'}, title:'Data Visualisation', desc:'Serves dashboards, reports, APIs, and exports. All presentation is governed by product and semantic metadata — layout, access, and readiness rules are all metadata-driven.', sections:[
+    {label:'Metadata consumed',chips:[{t:'Semantic Metadata',c:'#6D28D9'},{t:'Product Metadata',c:'#9D174D'},{t:'Lineage / Control',c:'#0D9488'}]},
+    {label:'What it does',bullets:['Reads product metadata to render dashboards and reports','Uses semantic metadata for query models and business term resolution','Checks lineage/control metadata for data readiness before surfacing outputs','Enforces access rules from product metadata','Serves REST API endpoints defined in product metadata','Provides Data Readiness Console: upstream layer status per report']},
+    {label:'AI at this layer',bullets:['Generates narrative summaries alongside dashboards','Explains metric movements in plain language','Suggests dashboard layouts based on user access patterns']},
+  ]},
+
+  'row-ctl':{ badge:{label:'Processing Layer',color:'#6D28D9',bg:'#EDE9FE'}, title:'Data Control Panel', desc:'Governance and observability across all layers. Reads and writes lineage/control metadata. Spans all data and metadata layers simultaneously.', sections:[
+    {label:'Metadata consumed',chips:[{t:'Reference Model',c:'#64748B'},{t:'Mapping Metadata',c:'#B45309'},{t:'Transformation Metadata',c:'#1D4ED8'},{t:'Computation Metadata',c:'#15803D'},{t:'Semantic Metadata',c:'#6D28D9'},{t:'Product Metadata',c:'#9D174D'},{t:'Lineage / Control',c:'#0D9488'}]},
+    {label:'Core capabilities',table:{cols:['Capability','Description'],rows:[
+      ['Lineage Console','Forward/backward graph traversal for any output row'],
+      ['Staleness Engine','Detects and propagates stale state when inputs change'],
+      ['Rerun Engine','Single job, dependency chain, or all-stale rerun modes'],
+      ['Dependency Graph','Visualise and manage job-to-job execution dependencies'],
+      ['Exception Log','Track, assign, and resolve all data exceptions'],
+      ['Mapping Audit','Full audit trail of all field-level mapping decisions'],
+      ['Job Management','Create, configure, activate, pause, retire jobs'],
+    ]}},
+    {label:'Key Principle',callout:{text:'The Control Panel is the only layer that acts across all metadata components simultaneously. It is not a pipeline stage — it is an orthogonal governance capability.',color:'#6D28D9'}},
+  ]},
+
+  /* ── CELL PANELS — selected key intersections ────────────────────────── */
+  'cell-ing-ref':{ badge:{label:'Ingestion × Reference Model',color:'#64748B',bg:'#F1F5F9'}, title:'Reference Model drives Ingestion schema', desc:'The reference model defines the canonical schema that ingestion must produce. Every ingested record must conform to the canonical structure defined here.', sections:[
+    {label:'How it works',bullets:['Ingestion reads the reference model to determine target field names and types','Entity codes in source data are validated against reference model hierarchies','Classification codes assigned during ingestion must exist in the reference model','Schema normalisation rules derived from canonical field definitions']},
+  ]},
+  'cell-ing-map':{ badge:{label:'Ingestion × Mapping Metadata',color:'#B45309',bg:'#FEF3C7'}, title:'Mapping Metadata governs all ingestion logic', desc:'No ingestion logic is hardcoded. Every field mapping, validation rule, and default assignment is a versioned mapping metadata record.', sections:[
+    {label:'How it works',bullets:['Ingestion engine reads active mapping version for the source and period','Field-level rules applied in precedence order','Validation failures produce typed exceptions — never silent pass-through','Mapping changes activate immediately for next run — no code deployment']},
+    {label:'AI Interaction',bullets:['AI suggests mapping rules from field name and type similarity analysis','Inconsistencies between mapping versions flagged before activation']},
+  ]},
+  'cell-ing-lin':{ badge:{label:'Ingestion × Lineage/Control',color:'#0D9488',bg:'#CCFBF1'}, title:'Ingestion writes lineage from first load', desc:'Every raw batch and transaction record produced by ingestion is captured in lineage metadata. This is the start of the end-to-end lineage chain.', sections:[
+    {label:'What is captured',bullets:['Raw batch record: source, timestamp, row count, file reference','Row-level lineage: raw_row_id → transaction_row_id (1:1)','Exception records: every unmatched or failed row with reason code','Source validation audit: completeness, volume, structural checks']},
+  ]},
+  'cell-trf-ref':{ badge:{label:'Transformation × Reference Model',color:'#64748B',bg:'#F1F5F9'}, title:'Reference alignment during transformation', desc:'Transformation rules reference the canonical model for classification alignment, dimension lookups, and cross-schedule entity matching.', sections:[
+    {label:'How it works',bullets:['Classification rules resolve entity codes against reference model hierarchies','Offsetting and reclassification rules use reference model dimension keys','Cross-schedule transformations rely on consistent entity codes from the reference model']},
+  ]},
+  'cell-trf-trm':{ badge:{label:'Transformation × Transformation Metadata',color:'#1D4ED8',bg:'#DBEAFE'}, title:'Transformation Metadata is the instruction set', desc:'The transformation engine reads rule groups from transformation metadata at runtime. No logic is compiled into the engine — it is purely configuration-driven.', sections:[
+    {label:'How it works',bullets:['Job configuration references a rule group ID — not embedded logic','At run time: resolve rule versions by effective date for the run period','Sort rules by precedence; evaluate in order for each source row','Dependency chain: execute rules in topological sort order','Write rule_id and version_number into lineage for every output row']},
+    {label:'Key Principle',callout:{text:'Changing transformation behaviour requires only a metadata change — not a code deployment. This is the single most important architectural characteristic of the transformation layer.',color:'#1D4ED8'}},
+  ]},
+  'cell-trf-lin':{ badge:{label:'Transformation × Lineage/Control',color:'#0D9488',bg:'#CCFBF1'}, title:'Transformation writes detailed execution lineage', desc:'Every transformation output carries a complete lineage record linking it to its source rows, the job, the run, and the exact rule version applied.', sections:[
+    {label:'What is captured',bullets:['Source row IDs → target row IDs (1:1, 1:N, N:M depending on type)','Job ID, run ID, rule ID, rule version number','Transformation type: field_level, enrichment, across_row, allocation','Staleness signals: when source data or rules change, downstream runs are marked stale']},
+  ]},
+  'cell-prc-cmp':{ badge:{label:'Processing × Computation Metadata',color:'#15803D',bg:'#DCFCE7'}, title:'KPI Engine reads Computation Metadata at runtime', desc:'Every KPI computation is a metadata record. The computation engine has no hardcoded metric logic — it reads definitions and executes them.', sections:[
+    {label:'How it works',bullets:['KPI definition specifies: formula, base fields, aggregation scope, period logic','Engine resolves correct KPI version for the computation period','Compound metrics: reference outputs of other KPIs as inputs','Threshold bands trigger alerts when metric breaches defined limits','All computation outputs tagged with KPI_id and version for lineage']},
+  ]},
+  'cell-prc-sem':{ badge:{label:'Processing × Semantic Metadata',color:'#6D28D9',bg:'#EDE9FE'}, title:'Semantic Metadata structures metric outputs', desc:'After computation, the semantic layer organises metric outputs into business-understandable structures using semantic metadata definitions.', sections:[
+    {label:'How it works',bullets:['Metric models define how KPIs relate to each other and to dimensions','Dimension hierarchies control how data rolls up across entity, time, geography','Query models expose semantic objects to visualisation tools (JDBC/ODBC)','Business term mappings ensure consistent naming regardless of querying tool']},
+  ]},
+  'cell-prc-lin':{ badge:{label:'Processing × Lineage/Control',color:'#0D9488',bg:'#CCFBF1'}, title:'Computation lineage for every output metric', desc:'Every computed KPI and metric output is tagged with its computation metadata reference, enabling full auditability of metric values.', sections:[
+    {label:'What is captured',bullets:['Fact row → KPI definition ID and version','Source rows that contributed to the aggregate','Run ID and computation timestamp','Stale flag: set if upstream transformation outputs change after computation']},
+  ]},
+  'cell-viz-sem':{ badge:{label:'Visualisation × Semantic Metadata',color:'#6D28D9',bg:'#EDE9FE'}, title:'Semantic Metadata enables business-layer queries', desc:'Visualisation tools query the semantic layer using business terminology — not raw field names. Semantic metadata defines this translation.', sections:[
+    {label:'How it works',bullets:['BI tools connect via JDBC/ODBC to semantic query models','Query "Net Payable for Entity A, Q1 2025" resolves to the correct underlying fields','Dimension hierarchies control drill-down paths in dashboards','Single definition ensures all tools return the same metric value for the same query']},
+  ]},
+  'cell-viz-prd':{ badge:{label:'Visualisation × Product Metadata',color:'#9D174D',bg:'#FCE7F3'}, title:'Product Metadata defines every output surface', desc:'Dashboards, reports, and APIs are not built — they are configured. Product metadata defines what to show, who can see it, and when it can be published.', sections:[
+    {label:'How it works',bullets:['Dashboard renderer reads widget, filter, and layout definitions from metadata','Report engine reads column, grouping, and formatting definitions','API gateway reads endpoint definitions: fields, auth scope, pagination','Data Readiness rules check upstream layer currency before allowing publish','Access rules enforced from product metadata — not hardcoded permissions']},
+    {label:'Governance',bullets:['New dashboard requires approval before activation','Layout changes version-controlled with rollback capability','All access rule changes logged with approver and timestamp']},
+  ]},
+  'cell-viz-lin':{ badge:{label:'Visualisation × Lineage/Control',color:'#0D9488',bg:'#CCFBF1'}, title:'Data Readiness gates all visualisation output', desc:'Before any dashboard or report is surfaced, lineage/control metadata is checked to confirm all upstream layers are current and complete.', sections:[
+    {label:'Readiness signals',bullets:['GREEN — all upstream layers current, no staleness, no open exceptions','AMBER — upstream completed with exceptions; outputs available but flagged','RED — upstream stale or failed; product view may show outdated data','GREY — upstream has not yet been processed for this period']},
+  ]},
+  'cell-ctl-lin':{ badge:{label:'Control Panel × Lineage/Control',color:'#0D9488',bg:'#CCFBF1'}, title:'Control Panel is the primary owner of Lineage Metadata', desc:'The Data Control Panel reads and writes all lineage and control metadata. This is the intersection where observability, governance, and operational control converge.', sections:[
+    {label:'What it manages',bullets:['Full lineage graph: forward and backward traversal for any row','Dependency graph: job execution ordering and dependency satisfaction','Staleness engine: detects and propagates stale state across all outputs','Rerun engine: single job, dependency chain, or all-stale rerun modes','Exception log: typed, assignable, resolvable exception records','Job registry: durable configuration of all transformation and computation jobs']},
+    {label:'Key Principle',callout:{text:'Full observability: lineage, staleness, rerun = complete control. Every output can be traced to origin. Every stale output identified and resolved. Every exception tracked and auditable.',color:'#0D9488'}},
+  ]},
+};
+
+let activeEl=null, activeId=null;
+let currentView='base';
+
+function setView(v){
+  currentView=v;
+  document.getElementById('btn-base').className='vt-btn'+(v==='base'?' active-base':'');
+  document.getElementById('btn-ai').className='vt-btn'+(v==='ai'?' active-ai':'');
+  document.getElementById('btn-gov').className='vt-btn'+(v==='gov'?' active-gov':'');
+  const canvas=document.getElementById('canvas');
+  canvas.classList.remove('overlay-ai','overlay-gov');
+  if(v==='ai')  canvas.classList.add('overlay-ai');
+  if(v==='gov') canvas.classList.add('overlay-gov');
+}
+
+function recalcMatrix(){
+  const canvas=document.getElementById('canvas');
+  const wrap=document.getElementById('matrix-wrap');
+  if(!canvas||!wrap) return;
+  requestAnimationFrame(function(){
+    var canvasH=canvas.clientHeight;
+    var usedH=28;
+    var children=canvas.children;
+    for(var i=0;i<children.length;i++){
+      if(children[i]===wrap) continue;
+      usedH+=children[i].offsetHeight+6;
+    }
+    var available=Math.max(canvasH-usedH,300);
+    wrap.style.height=available+'px';
+    wrap.style.flex='none';
+  });
+}
+window.addEventListener('resize',recalcMatrix);
+window.addEventListener('load',function(){ recalcMatrix(); setTimeout(recalcMatrix,200); });
+
+function openPanel(id,el){
+  if(activeId===id){closePanel();return;}
+  if(activeEl) activeEl.classList.remove('active');
+  activeId=id; activeEl=el; el.classList.add('active');
+  const d=DATA[id]; if(!d) return;
+  let h=`<div class="panel-top" style="border-top:3px solid ${d.badge.color}">
+    <button class="panel-close" onclick="closePanel()">✕</button>
+    <div class="p-badge" style="background:${d.badge.bg};color:${d.badge.color}">${d.badge.label}</div>
+    <div class="p-title">${d.title}</div>
+    <div class="p-desc">${d.desc}</div>
+  </div><div class="panel-body">`;
+  d.sections.forEach(s=>{
+    h+=`<div class="p-section"><div class="p-label">${s.label}</div>`;
+    if(s.bullets) s.bullets.forEach(b=>{ h+=`<div class="p-bullet"><div class="p-dot" style="background:${d.badge.color}"></div><div class="p-bullet-text">${b}</div></div>`; });
+    if(s.chips){ h+=`<div class="p-chips">`; s.chips.forEach(c=>{ h+=`<span class="p-chip" style="color:${c.c};border-color:${c.c};background:${c.c}18">${c.t}</span>`; }); h+=`</div>`; }
+    if(s.table){ h+=`<table class="p-table"><thead><tr>${s.table.cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`; s.table.rows.forEach(r=>{ h+=`<tr>${r.map((v,i)=>`<td${i===0?` style="color:${d.badge.color};font-weight:600"`:''} >${v}</td>`).join('')}</tr>`; }); h+=`</tbody></table>`; }
+    if(s.callout) h+=`<div class="p-callout" style="border-color:${s.callout.color}">${s.callout.text}</div>`;
+    if(s.flow){
+      h+='<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">';
+      s.flow.forEach(function(f,fi){
+        h+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;background:${f.bg};border:1.5px solid ${f.color}">`;
+        h+=`<div style="width:10px;height:10px;border-radius:50%;background:${f.color};flex-shrink:0"></div>`;
+        h+=`<div style="flex:1"><div style="font-size:13px;font-weight:700;color:${f.color};line-height:1.2">${f.label}</div>`;
+        h+=`<div style="font-size:11px;color:#4B5680;margin-top:2px">${f.desc}</div></div></div>`;
+        if(fi<s.flow.length-1) h+=`<div style="text-align:center;color:#BFD0E8;font-size:13px;line-height:1;margin:-1px 0">↓</div>`;
+      });
+      h+='</div>';
+    }
+    h+=`</div>`;
+  });
+  h+=`</div>`;
+  document.getElementById('panel-inner').innerHTML=h;
+  document.getElementById('panel').classList.add('open');
+  setTimeout(recalcMatrix,350);
+}
+function closePanel(){
+  if(activeEl) activeEl.classList.remove('active');
+  activeEl=null; activeId=null;
+  document.getElementById('panel').classList.remove('open');
+  setTimeout(recalcMatrix,400);
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closePanel(); });
+</script>
+
+</body>
+</html>
